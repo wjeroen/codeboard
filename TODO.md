@@ -11,11 +11,9 @@ below all live in the [README](./README.md). This file is just the checklist.
 ## Current Sprint
 
 ### High Priority
-- [ ] Confirm GitHub Actions actually builds an APK. The `android.yml` workflow
-      shows **0 runs** so far. Make a run go green and download the
-      `codeboard-debug` artifact (see README → "If no build appears" for why a
-      run may not start: Actions disabled on a fork, or a push made by an
-      automation token).
+- [ ] Install the CI-built `codeboard-debug` APK on a real device and smoke-test
+      the three never-compiled changes (Backup export/import, third SYM row fix).
+      The CI build itself is now green; this is the on-device check.
 
 ### Features to Implement
 - [ ] **Feature B: brighter key-press preview** (small). The preview reuses the
@@ -32,8 +30,8 @@ below all live in the [README](./README.md). This file is just the checklist.
 - [ ] (none open)
 
 ### Testing
-- [ ] Build the debug APK in CI, install it on a device, and smoke-test the three
-      already-merged changes below. None of them have ever been compiled (see note).
+- [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
+- [ ] Install that APK on a device and smoke-test the three never-compiled changes (tracked under High Priority)
 
 ### Documentation
 - [x] Rewrite README: full feature list, build/CI steps, settings, and a codebase map (2026-06-25)
@@ -44,7 +42,8 @@ below all live in the [README](./README.md). This file is just the checklist.
 ## Completed Recently
 - [x] Rewrite the CI workflow to build on `ubuntu-latest` with `assembleDebug`,
       modelled on the working TrackyTime workflow (was `windows-latest` +
-      `gradlew.bat assemble`); added a manual "Run workflow" trigger (2026-06-25)
+      `gradlew.bat assemble`); added a manual "Run workflow" trigger. Verified
+      green: the first run built and uploaded the APK in ~1m45s (2026-06-25)
 - [x] Fix attribution: upstream is `gazlaws-dev/codeboard`, not `gazlaws/codeboard`
       (the old link 404s); credit the original author by name with a link (2026-06-25)
 - [x] Settings **export/import** ("Backup" section) via the Storage Access
