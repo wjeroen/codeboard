@@ -29,14 +29,13 @@ actually works (architecture, codebase map, build and install) is in the
       Geometry transform on the normalized key boxes. (Plan below.)
 
 ### Bug Fixes
-- [ ] **Ctrl+Enter does not insert a newline** in "Enter = send" fields (chat apps).
-      It currently sends an Enter key event with a Ctrl modifier, which apps ignore
-      or treat as send. Proposed fix: make Ctrl+Enter commit a literal newline
-      (`CodeBoardIME.onKey`, the Enter case, primaryCode -4). Needs on-device check.
-- [ ] **First two SYM rows show swapped default symbols** on a fresh install (before
-      you customise them). `getCustomSymbolsSym()` and `getCustomSymbolsSym2()` in
-      `KeyboardPreferences.java` fall back to each other's default string. Fix: point
-      each getter at its own matching default.
+- [ ] **Ctrl+Enter does not give a newline in "Enter = send" apps** (e.g. chat web
+      apps). Root cause: Android soft keyboards cannot reliably deliver a real
+      Ctrl+Enter modifier combo to apps (Android docs say not to rely on soft-keyboard
+      key events), and Codeboard also releases Ctrl just before sending Enter, so the
+      app sees a plain Enter and sends. Likely fix: on Ctrl+Enter, commit a literal
+      newline (`CodeBoardIME.onKey`, primaryCode -4) so it bypasses the app's
+      "Enter = send" handler. Must be tested per app on a device.
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
@@ -50,6 +49,9 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Fix swapped SYM-row defaults: `getCustomSymbolsSym()` and `getCustomSymbolsSym2()`
+      now fall back to their own default strings, so a fresh install shows the top two
+      SYM rows with the intended characters (`KeyboardPreferences.java`) (2026-06-25)
 - [x] Give the fork its own app ID `com.gazlaws.codeboard.fork` and name "CodeBoard
       Fork" so it installs next to the original instead of conflicting. Also pointed
       the Restart Tutorial intent at the new ID (2026-06-25)

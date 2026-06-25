@@ -150,7 +150,8 @@ public class KeyboardPreferences {
     }
 
     public String getCustomSymbolsSym() {
-        return read("input_symbols_sym", res.getString(R.string.input_symbols_sym_2));
+        // Fall back to this row's own default (was crossed with input_symbols_sym_2).
+        return read("input_symbols_sym", res.getString(R.string.input_symbols_sym));
     }
 
     public void setCustomSymbolsSym(String symbols) {
@@ -158,7 +159,8 @@ public class KeyboardPreferences {
     }
 
     public String getCustomSymbolsSym2() {
-        return read("input_symbols_sym_2", res.getString(R.string.input_symbols_sym));
+        // Fall back to this row's own default (was crossed with input_symbols_sym).
+        return read("input_symbols_sym_2", res.getString(R.string.input_symbols_sym_2));
     }
 
     public String getCustomSymbolsSym3() {
