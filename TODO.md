@@ -34,14 +34,16 @@ actually works (architecture, codebase map, build and install) is in the
       items, and how to clear it for privacy.
 
 ### Bug Fixes
-- [ ] **Newline in "Enter = send" apps (Shift+Enter, needs on-device test):**
-      Shift+Enter now types a literal newline (`CodeBoardIME.onKey`, Enter case) instead
-      of sending a Return keypress, so it forces a line break even where plain Enter
-      sends. Plain Enter is unchanged. Ctrl+Enter was reverted (not a standard newline
-      shortcut). Old "space" root cause: Android soft keyboards cannot reliably deliver a
-      real Shift+Enter to apps (web editors especially), so the synthetic keypress
-      arrived garbled. Test on a device (e.g. Claude mobile web); if a rich web editor
-      still ignores the typed newline, fall back to a dedicated newline key.
+- [ ] **Keyboard appears twice (English + French)** in the system keyboard switcher.
+      `res/xml/method.xml` declares two IME subtypes (en_US and fr_FR), and the code
+      never uses the subtype (the layout comes from the "layout" preference), so the
+      French entry is redundant. Fix: drop the fr_FR subtype for a single entry.
+      Present in the original too.
+- [ ] **Settings banner overlaps the first rows** (top of the list hidden even when
+      scrolled all the way up; worse on tablets/foldables). Most likely Android 15
+      edge-to-edge (targetSdk 35) not insetting the settings screen, so the action bar
+      floats over the first preferences. Try `fitsSystemWindows` on the settings layout
+      root, or real window-inset handling. Present in the original too.
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
@@ -55,6 +57,10 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Shift+Enter now inserts a real newline in "Enter = send" apps (confirmed working
+      on device). Ctrl+Enter left stock. The old behaviour failed because Android does
+      not reliably deliver a soft-keyboard Shift+Enter to web editors
+      (`CodeBoardIME.onKey`) (2026-06-25)
 - [x] Fix swapped SYM-row defaults: `getCustomSymbolsSym()` and `getCustomSymbolsSym2()`
       now fall back to their own default strings, so a fresh install shows the top two
       SYM rows with the intended characters (`KeyboardPreferences.java`) (2026-06-25)
