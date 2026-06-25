@@ -280,7 +280,16 @@ public class CodeBoardIME extends InputMethodService
 //                            ke = KeyEvent.keyCodeFromString("KEYCODE_" + code);
 //                        }
                 }
-                if (ke != 0) {
+                if (primaryCode == -4
+                        && (meta & (KeyEvent.META_SHIFT_ON | KeyEvent.META_CTRL_ON)) != 0) {
+                    // Shift+Enter and Ctrl+Enter force a literal newline. In apps where
+                    // plain Enter sends (chat apps, web composers), this types a real
+                    // line break instead, because it goes through the text path rather
+                    // than a Return key event (soft keyboards deliver key events, and
+                    // modifier combos, unreliably). Plain Enter is left untouched, so it
+                    // still sends where the app expects it to.
+                    ic.commitText("\n", 1);
+                } else if (ke != 0) {
 
                     Log.d(getClass().getSimpleName(), "onKey: keyEvent " + ke);
 

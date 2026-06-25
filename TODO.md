@@ -29,13 +29,12 @@ actually works (architecture, codebase map, build and install) is in the
       Geometry transform on the normalized key boxes. (Plan below.)
 
 ### Bug Fixes
-- [ ] **Ctrl+Enter does not give a newline in "Enter = send" apps** (e.g. chat web
-      apps). Root cause: Android soft keyboards cannot reliably deliver a real
-      Ctrl+Enter modifier combo to apps (Android docs say not to rely on soft-keyboard
-      key events), and Codeboard also releases Ctrl just before sending Enter, so the
-      app sees a plain Enter and sends. Likely fix: on Ctrl+Enter, commit a literal
-      newline (`CodeBoardIME.onKey`, primaryCode -4) so it bypasses the app's
-      "Enter = send" handler. Must be tested per app on a device.
+- [ ] **Newline in "Enter = send" apps (implemented, needs on-device test):**
+      Shift+Enter and Ctrl+Enter now insert a literal newline (`CodeBoardIME.onKey`,
+      Enter case) instead of sending a Return key event, so they force a line break
+      even where plain Enter sends. Plain Enter is unchanged. Verify on a device in
+      real apps (e.g. Claude's mobile web). If a rich web editor ignores the inserted
+      newline, fall back to a dedicated newline key.
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
