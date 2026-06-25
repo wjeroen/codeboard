@@ -27,14 +27,21 @@ actually works (architecture, codebase map, build and install) is in the
       Hold a letter to pick `é`, `à`, etc. Builds on Feature B. (Plan below.)
 - [ ] **Feature D: split keyboard for tablets/foldables** (medium, low urgency).
       Geometry transform on the normalized key boxes. (Plan below.)
+- [ ] **Feature E: clipboard history** (medium-large, not yet designed). Replace the
+      current fixed setup (7 manually-set pins plus the single current clipboard) with a
+      real, growing history of recently copied items you can scroll and paste from on the
+      Ctrl+SYM page. Needs a design pass first: where/how history is stored, how many
+      items, and how to clear it for privacy.
 
 ### Bug Fixes
-- [ ] **Newline in "Enter = send" apps (implemented, needs on-device test):**
-      Shift+Enter and Ctrl+Enter now insert a literal newline (`CodeBoardIME.onKey`,
-      Enter case) instead of sending a Return key event, so they force a line break
-      even where plain Enter sends. Plain Enter is unchanged. Verify on a device in
-      real apps (e.g. Claude's mobile web). If a rich web editor ignores the inserted
-      newline, fall back to a dedicated newline key.
+- [ ] **Newline in "Enter = send" apps (Shift+Enter, needs on-device test):**
+      Shift+Enter now types a literal newline (`CodeBoardIME.onKey`, Enter case) instead
+      of sending a Return keypress, so it forces a line break even where plain Enter
+      sends. Plain Enter is unchanged. Ctrl+Enter was reverted (not a standard newline
+      shortcut). Old "space" root cause: Android soft keyboards cannot reliably deliver a
+      real Shift+Enter to apps (web editors especially), so the synthetic keypress
+      arrived garbled. Test on a device (e.g. Claude mobile web); if a rich web editor
+      still ignores the typed newline, fall back to a dedicated newline key.
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)

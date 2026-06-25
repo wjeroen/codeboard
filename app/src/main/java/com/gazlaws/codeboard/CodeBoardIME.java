@@ -280,14 +280,15 @@ public class CodeBoardIME extends InputMethodService
 //                            ke = KeyEvent.keyCodeFromString("KEYCODE_" + code);
 //                        }
                 }
-                if (primaryCode == -4
-                        && (meta & (KeyEvent.META_SHIFT_ON | KeyEvent.META_CTRL_ON)) != 0) {
-                    // Shift+Enter and Ctrl+Enter force a literal newline. In apps where
-                    // plain Enter sends (chat apps, web composers), this types a real
-                    // line break instead, because it goes through the text path rather
-                    // than a Return key event (soft keyboards deliver key events, and
-                    // modifier combos, unreliably). Plain Enter is left untouched, so it
-                    // still sends where the app expects it to.
+                if (primaryCode == -4 && (meta & KeyEvent.META_SHIFT_ON) != 0) {
+                    // Shift+Enter forces a literal newline. Shift+Enter is the common
+                    // "new line without sending" shortcut, but on Android a soft keyboard
+                    // cannot reliably deliver a real Shift+Enter to the app (Android does
+                    // not guarantee key events, or modifier state, reach apps, especially
+                    // web views). Typing a real "\n" through the text path gives a
+                    // dependable line break. Plain Enter is left untouched, so it still
+                    // sends where apps expect. Ctrl+Enter is intentionally NOT wired here,
+                    // it is not a standard newline shortcut (some apps use it to send).
                     ic.commitText("\n", 1);
                 } else if (ke != 0) {
 
