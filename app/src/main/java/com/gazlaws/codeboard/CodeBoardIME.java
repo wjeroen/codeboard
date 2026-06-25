@@ -537,7 +537,12 @@ public class CodeBoardIME extends InputMethodService
                 if (!mCustomSymbolsSym4.isEmpty()) {
                     Definitions.addCustomRow(builder, mCustomSymbolsSym4);
                 }
-                if (mCustomSymbolsSym3.isEmpty() && mCustomSymbolsSym4.isEmpty()) {
+                // Keep the function-key rows (F1-F12, Home/End/Del, PgUp/PgDn) whenever
+                // the fourth row is unused. Adding only a third row now augments the
+                // function keys instead of replacing them. Once a fourth row is added the
+                // keyboard gets tall enough that swapping in a plain space row makes more
+                // sense, so the original behavior is preserved in that case.
+                if (mCustomSymbolsSym4.isEmpty()) {
                     definitions.addSymbolRows(builder);
                 } else {
                     definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);

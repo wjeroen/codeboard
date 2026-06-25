@@ -188,6 +188,16 @@
             android:title="Pin 7:"
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
+    <PreferenceCategory android:title="Backup">
+        <Preference
+            android:key="export_settings"
+            android:summary="Save all settings and custom symbols to a file"
+            android:title="Export settings" />
+        <Preference
+            android:key="import_settings"
+            android:summary="Restore settings from a previously exported file"
+            android:title="Import settings" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="Restore">
         <Preference
             android:key="restore_default"
