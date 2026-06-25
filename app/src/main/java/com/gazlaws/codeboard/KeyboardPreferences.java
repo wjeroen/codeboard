@@ -8,6 +8,12 @@ import android.util.TypedValue;
 
 import androidx.preference.PreferenceManager;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Iterator;
+import java.util.Map;
+
 public class KeyboardPreferences {
     private SharedPreferences preferences;
     private Resources res;
@@ -237,6 +243,85 @@ public class KeyboardPreferences {
     public void resetAllToDefault() {
         SharedPreferences.Editor editor = preferences.edit();
         editor.clear();
+        editor.apply();
+        setFirstStart(false);
+    }
+
+    /**
+     * Serialises every stored preference into a JSON string. Each entry records its
+     * value type so that import can restore the exact SharedPreferences type (writing a
+     * String back as a boolean, or vice versa, would crash the callers that read them).
+     */
+    public String exportToJson() throws JSONException {
+        JSONObject root = new JSONObject();
+        root.put("version", 1);
+        JSONObject prefs = new JSONObject();
+        for (Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
+            Object value = entry.getValue();
+            if (value == null) {
+                continue;
+            }
+            JSONObject node = new JSONObject();
+            if (value instanceof Boolean) {
+                node.put("type", "boolean");
+                node.put("value", (Boolean) value);
+            } else if (value instanceof String) {
+                node.put("type", "string");
+                node.put("value", (String) value);
+            } else if (value instanceof Integer) {
+                node.put("type", "int");
+                node.put("value", (Integer) value);
+            } else if (value instanceof Long) {
+                node.put("type", "long");
+                node.put("value", (Long) value);
+            } else if (value instanceof Float) {
+                node.put("type", "float");
+                node.put("value", (Float) value);
+            } else {
+                // Unsupported type (e.g. Set<String>) - skip rather than corrupt the file.
+                continue;
+            }
+            prefs.put(entry.getKey(), node);
+        }
+        root.put("preferences", prefs);
+        return root.toString(2);
+    }
+
+    /**
+     * Replaces all stored preferences with the contents of a JSON string previously
+     * produced by {@link #exportToJson()}. Values are restored using the type recorded
+     * for each key.
+     */
+    public void importFromJson(String json) throws JSONException {
+        JSONObject root = new JSONObject(json);
+        JSONObject prefs = root.getJSONObject("preferences");
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.clear();
+        Iterator<String> keys = prefs.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            JSONObject node = prefs.getJSONObject(key);
+            String type = node.getString("type");
+            switch (type) {
+                case "boolean":
+                    editor.putBoolean(key, node.getBoolean("value"));
+                    break;
+                case "string":
+                    editor.putString(key, node.getString("value"));
+                    break;
+                case "int":
+                    editor.putInt(key, node.getInt("value"));
+                    break;
+                case "long":
+                    editor.putLong(key, node.getLong("value"));
+                    break;
+                case "float":
+                    editor.putFloat(key, (float) node.getDouble("value"));
+                    break;
+                default:
+                    break;
+            }
+        }
         editor.apply();
         setFirstStart(false);
     }

@@ -1,5 +1,6 @@
 package com.gazlaws.codeboard;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
@@ -8,13 +9,19 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.preference.EditTextPreference;
@@ -22,6 +29,11 @@ import androidx.preference.EditTextPreferenceDialogFragmentCompat;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 import com.gazlaws.codeboard.theme.IOnFocusListenable;
 import com.gazlaws.codeboard.theme.ThemeDefinitions;
@@ -36,6 +48,38 @@ import static android.provider.Settings.Secure.DEFAULT_INPUT_METHOD;
 
 public class SettingsFragment extends PreferenceFragmentCompat implements IOnFocusListenable {
     KeyboardPreferences keyboardPreferences;
+
+    private static final String EXPORT_FILE_NAME = "codeboard_settings.json";
+
+    private final ActivityResultLauncher<Intent> exportLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    new ActivityResultCallback<ActivityResult>() {
+                        @Override
+                        public void onActivityResult(ActivityResult result) {
+                            if (result.getResultCode() == Activity.RESULT_OK
+                                    && result.getData() != null) {
+                                Uri uri = result.getData().getData();
+                                if (uri != null) {
+                                    writeSettingsToUri(uri);
+                                }
+                            }
+                        }
+                    });
+
+    private final ActivityResultLauncher<Intent> importLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    new ActivityResultCallback<ActivityResult>() {
+                        @Override
+                        public void onActivityResult(ActivityResult result) {
+                            if (result.getResultCode() == Activity.RESULT_OK
+                                    && result.getData() != null) {
+                                Uri uri = result.getData().getData();
+                                if (uri != null) {
+                                    readSettingsFromUri(uri);
+                                }
+                            }
+                        }
+                    });
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -136,10 +180,85 @@ public class SettingsFragment extends PreferenceFragmentCompat implements IOnFoc
             case "restore_old":
                 classicSymbols();
                 break;
+            case "export_settings":
+                launchExport();
+                break;
+            case "import_settings":
+                launchImport();
+                break;
             default:
                 break;
         }
         return super.onPreferenceTreeClick(preference);
+    }
+
+    private void launchExport() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, EXPORT_FILE_NAME);
+        exportLauncher.launch(intent);
+    }
+
+    private void launchImport() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        // Use a permissive type so exported files are visible regardless of how the
+        // storage provider reports their MIME type.
+        intent.setType("*/*");
+        importLauncher.launch(intent);
+    }
+
+    private void writeSettingsToUri(Uri uri) {
+        OutputStream os = null;
+        try {
+            String json = keyboardPreferences.exportToJson();
+            os = requireActivity().getContentResolver().openOutputStream(uri, "wt");
+            if (os != null) {
+                os.write(json.getBytes(Charset.forName("UTF-8")));
+                os.flush();
+            }
+            Toast.makeText(getActivity(), "Settings exported", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e(getClass().getSimpleName(), "writeSettingsToUri: " + e.getMessage(), e);
+            Toast.makeText(getActivity(), "Export failed", Toast.LENGTH_SHORT).show();
+        } finally {
+            closeQuietly(os);
+        }
+    }
+
+    private void readSettingsFromUri(Uri uri) {
+        InputStream is = null;
+        try {
+            is = requireActivity().getContentResolver().openInputStream(uri);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int read;
+            while (is != null && (read = is.read(buffer)) != -1) {
+                baos.write(buffer, 0, read);
+            }
+            String json = new String(baos.toByteArray(), Charset.forName("UTF-8"));
+            keyboardPreferences.importFromJson(json);
+            // Rebuild the screen so the imported values are reflected in the UI.
+            getPreferenceScreen().removeAll();
+            addPreferencesFromResource(R.xml.preferences);
+            Toast.makeText(getActivity(), "Settings imported", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e(getClass().getSimpleName(), "readSettingsFromUri: " + e.getMessage(), e);
+            Toast.makeText(getActivity(), "Import failed - not a valid settings file",
+                    Toast.LENGTH_SHORT).show();
+        } finally {
+            closeQuietly(is);
+        }
+    }
+
+    private void closeQuietly(java.io.Closeable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private void confirmReset() {
