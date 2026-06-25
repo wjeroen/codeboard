@@ -29,7 +29,14 @@ actually works (architecture, codebase map, build and install) is in the
       Geometry transform on the normalized key boxes. (Plan below.)
 
 ### Bug Fixes
-- [ ] (none open)
+- [ ] **Ctrl+Enter does not insert a newline** in "Enter = send" fields (chat apps).
+      It currently sends an Enter key event with a Ctrl modifier, which apps ignore
+      or treat as send. Proposed fix: make Ctrl+Enter commit a literal newline
+      (`CodeBoardIME.onKey`, the Enter case, primaryCode -4). Needs on-device check.
+- [ ] **First two SYM rows show swapped default symbols** on a fresh install (before
+      you customise them). `getCustomSymbolsSym()` and `getCustomSymbolsSym2()` in
+      `KeyboardPreferences.java` fall back to each other's default string. Fix: point
+      each getter at its own matching default.
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
@@ -43,6 +50,10 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Give the fork its own app ID `com.gazlaws.codeboard.fork` and name "CodeBoard
+      Fork" so it installs next to the original instead of conflicting. Also pointed
+      the Restart Tutorial intent at the new ID (2026-06-25)
+- [x] Remove the in-app "Rate on Google Play" button (`preferences.xml`) (2026-06-25)
 - [x] Fixed debug signing so every CI build uses the SAME key and new APKs install
       over old ones with no uninstall. Committed a `debug.keystore` (a debug key is
       not secret) and wired an optional repo-secrets override into `android.yml`
@@ -65,10 +76,9 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Future Ideas
-- [ ] Credit the original author / upstream in the in-app About screen, and update
-      or remove the in-app "Rate on Google Play" link (it points at the original app).
-- [ ] Give the fork its own `applicationId` (for example a `.fork` suffix) so it
-      installs alongside the original CodeBoard instead of conflicting with it.
+- [ ] Credit the original author / upstream in the in-app About screen.
+- [ ] Pick a permanent name and app ID for the fork (currently the placeholder
+      "CodeBoard Fork" and `com.gazlaws.codeboard.fork`).
 - [ ] Per-layout accent maps (extends Feature C) for AZERTY / QWERTZ users.
 - [ ] Optional vertical drag for line navigation in Feature A.
 

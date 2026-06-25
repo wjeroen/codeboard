@@ -175,7 +175,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
-| **About** | Restart the tutorial, plus links to rate the app and open the upstream project on GitHub. (These links still point at the original app; update them in `preferences.xml` as the fork diverges.) |
+| **About** | Restart the tutorial, and an "Open on GitHub" link to the upstream project. |
 
 ---
 
@@ -284,7 +284,8 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 
 | | |
 |---|---|
-| Application ID | `com.gazlaws.codeboard` |
+| Application ID | `com.gazlaws.codeboard.fork` (distinct from the original `com.gazlaws.codeboard`, so both can be installed side by side) |
+| App name | "CodeBoard Fork" (placeholder, rename in `res/values/strings.xml`) |
 | Version | 6.0.3 (versionCode 23) |
 | Min SDK | 23 (Android 6.0) |
 | Target SDK | 35 |

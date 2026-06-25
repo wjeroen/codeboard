@@ -6,7 +6,9 @@ android {
     buildToolsVersion '34.0.0'
 
     defaultConfig {
-        applicationId "com.gazlaws.codeboard"
+        // Fork ID: different from the original (com.gazlaws.codeboard) so this app
+        // installs alongside the Play Store CodeBoard instead of replacing it.
+        applicationId "com.gazlaws.codeboard.fork"
         minSdkVersion 23
         targetSdk 35
         versionCode 23
