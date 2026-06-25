@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
-    <color name="colorPrimaryDark">#303F9F</color>
+    <!-- App chrome (action bar, intro screens). Deliberately a warm, red-leaning
+         purple so this fork is easy to tell apart from the original (which is indigo).
+         This does NOT affect the keyboard, which is themed separately. -->
+    <color name="colorPrimary">#AD1F8A</color>
+    <color name="colorPrimaryDark">#791660</color>
     <color name="colorAccent">#FF4081</color>
     <color name="ic_launcher_background">#3CE2D4</color>
 </resources>

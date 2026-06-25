@@ -49,8 +49,8 @@ useful, please consider supporting the original author (see [Credits](#credits--
   the keyboard open.
 - **No ads, no in-app purchases.** Made for students.
 
-The keyboard ships two IME subtypes out of the box: English (`en_US`) and
-French (`fr_FR`).
+The keyboard registers a single English (`en_US`) IME subtype, so it shows up
+once in the system keyboard switcher.
 
 ---
 
@@ -175,7 +175,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
-| **About** | Restart the tutorial, and an "Open on GitHub" link to the upstream project. |
+| **About** | Restart the tutorial, and an "Open on GitHub" link to this fork. |
 
 ---
 
@@ -266,7 +266,7 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `IntroActivity.java` / `IntroFragment.java` | First-run tutorial (built on the AppIntro library). |
 | `NotificationReceiver.java` | Backs the "open keyboard using notification" feature. |
 | `res/xml/preferences.xml` | The settings screen definition. |
-| `res/xml/method.xml` | IME metadata: declares the `en_US` and `fr_FR` subtypes. |
+| `res/xml/method.xml` | IME metadata: declares the single `en_US` subtype. |
 | `res/values/array.xml` | The Layouts and Themes lists shown in settings. |
 
 ### Tests

@@ -34,16 +34,11 @@ actually works (architecture, codebase map, build and install) is in the
       items, and how to clear it for privacy.
 
 ### Bug Fixes
-- [ ] **Keyboard appears twice (English + French)** in the system keyboard switcher.
-      `res/xml/method.xml` declares two IME subtypes (en_US and fr_FR), and the code
-      never uses the subtype (the layout comes from the "layout" preference), so the
-      French entry is redundant. Fix: drop the fr_FR subtype for a single entry.
-      Present in the original too.
-- [ ] **Settings banner overlaps the first rows** (top of the list hidden even when
-      scrolled all the way up; worse on tablets/foldables). Most likely Android 15
-      edge-to-edge (targetSdk 35) not insetting the settings screen, so the action bar
-      floats over the first preferences. Try `fitsSystemWindows` on the settings layout
-      root, or real window-inset handling. Present in the original too.
+- [ ] **Settings banner overlaps the first rows (fitsSystemWindows applied, needs test):**
+      Added `android:fitsSystemWindows="true"` to the settings layout root. This is most
+      likely an Android 15 edge-to-edge issue (targetSdk 35). If the overlap persists on
+      a device, escalate to proper window-inset handling or the Android 15 edge-to-edge
+      opt-out flag.
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
@@ -57,6 +52,12 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Recolor the app chrome (action bar, intro screens) to a red-leaning purple
+      (#AD1F8A) so the fork is visually distinct from the original indigo; the keyboard
+      themes are unaffected (2026-06-25)
+- [x] Remove the duplicate French keyboard entry: dropped the fr_FR IME subtype from
+      `method.xml` (the layout is chosen in settings, not by subtype) (2026-06-25)
+- [x] Point the in-app "Open on GitHub" link at this fork (wjeroen/codeboard) (2026-06-25)
 - [x] Shift+Enter now inserts a real newline in "Enter = send" apps (confirmed working
       on device). Ctrl+Enter left stock. The old behaviour failed because Android does
       not reliably deliver a soft-keyboard Shift+Enter to web editors

@@ -218,7 +218,7 @@
             android:title="Open on GitHub">
             <intent
                 android:action="android.intent.action.VIEW"
-                android:data="https://github.com/gazlaws-dev/codeboard" />
+                android:data="https://github.com/wjeroen/codeboard" />
         </Preference>
 
     </PreferenceCategory>
