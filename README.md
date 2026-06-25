@@ -24,7 +24,6 @@ useful, please consider supporting the original author (see [Credits](#credits--
 - [Settings reference](#settings-reference)
 - [Backup and restore](#backup-and-restore)
 - [Architecture and codebase map](#architecture-and-codebase-map)
-- [Roadmap (planned features)](#roadmap-planned-features)
 - [Project facts](#project-facts)
 - [Credits and license](#credits--license)
 
@@ -57,16 +56,17 @@ French (`fr_FR`).
 
 ## Install
 
-**Option 1: Google Play (original app).** The upstream build is on the
-[Play Store](https://play.google.com/store/apps/details?id=com.gazlaws.codeboard).
+Two ways to get the app:
 
-**Option 2: Build it yourself.** See [Build from source](#build-from-source)
-below, or grab a freshly built debug APK from
-[GitHub Actions](#continuous-integration-building-apks-on-github).
+1. **Download a build (easiest).** Grab the latest debug APK from
+   [GitHub Actions](#continuous-integration-building-apks-on-github): open the
+   newest **Build APK** run, download the `codeboard-debug` artifact, unzip it,
+   and install `app-debug.apk`.
+2. **Build it yourself.** See [Build from source](#build-from-source).
 
 After installing, you have to **enable** the keyboard (Android hides new IMEs by
 default): open the Codeboard app, follow the intro/tutorial, then in
-*System Settings → Languages & input → On-screen keyboards*, switch Codeboard on
+*System Settings, Languages & input, On-screen keyboards*, switch Codeboard on
 and select it as your active keyboard.
 
 ---
@@ -77,7 +77,7 @@ Codeboard is a standard Gradle Android project. You need **JDK 17** and the
 Android SDK (Android Studio is the easiest way to get both).
 
 ```bash
-# Debug APK (installable, signed with the local debug key)
+# Debug APK (installable, signed with the repo's committed debug key)
 ./gradlew assembleDebug
 
 # Output:
@@ -125,10 +125,27 @@ credentials. If you push the workflow and see no run, check, in order:
    `master` (or use *Run workflow* and pick the branch) to build the mainline.
 
 This workflow is modelled on the working build in the author's
-[TrackyTime](https://github.com/wjeroen/TrackyTime) repo. The main difference:
-TrackyTime signs its APK with a debug keystore stored in repo **secrets**;
-Codeboard does not need that, because its `build.gradle` has no signing config,
-so the runner's default debug key signs `app-debug.apk` and it installs fine.
+[TrackyTime](https://github.com/wjeroen/TrackyTime) repo.
+
+### Signing (why builds install over each other)
+
+Every build is signed with the **same** debug key, so a new APK installs straight
+over an older one with no uninstall. The key comes from a `debug.keystore`
+committed at the repo root. That is safe: a *debug* keystore is not a secret (it
+uses Android's well-known debug credentials), and it is never used for store
+releases.
+
+If you would rather keep the keystore out of the repo, add these four repository
+secrets and delete `debug.keystore`; the build picks them up automatically when
+they are present:
+
+- `DEBUG_KEYSTORE_BASE64` (the keystore file, base64-encoded)
+- `DEBUG_KEYSTORE_PASSWORD`
+- `DEBUG_KEY_ALIAS`
+- `DEBUG_KEY_PASSWORD`
+
+This is **debug** signing only. A real **release** signing key must never be
+committed, always keep that in secrets.
 
 ---
 
@@ -158,7 +175,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
-| **About** | Restart the tutorial, rate on Play, open the upstream project on GitHub. |
+| **About** | Restart the tutorial, plus links to rate the app and open the upstream project on GitHub. (These links still point at the original app; update them in `preferences.xml` as the fork diverges.) |
 
 ---
 
@@ -197,7 +214,7 @@ Understanding these few facts explains most of the code:
    pressing a key does not show a separate popup. The same key `View` is lifted
    with `setTranslationY(-200)` + `setScaleX/Y(1.2)` + `setElevation(21)` inside
    `animatePress()`. It reuses the normal key paint, which is why the preview
-   looks the same color as the key (see Roadmap → Feature B).
+   looks the same color as the key (Feature B in [`TODO.md`](./TODO.md) fixes this).
 4. **Long-press is a `Timer`.** `CodeBoardIME.onPress()` starts a `Timer` that
    fires `onKeyLongPress()` after `ViewConfiguration.getLongPressTimeout()`.
    Today `onKeyLongPress` handles shift-lock (code 16), ctrl-lock (code 17), and
@@ -260,83 +277,6 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `androidTest/.../DefinitionsTest.java` | Layout definitions (instrumented). |
 | `androidTest/.../KeyboardLayoutBuilderTest.java` | Layout builder (instrumented). |
 | `androidTest/.../MainActivityTest.java` | Main activity (instrumented). |
-
----
-
-## Roadmap (planned features)
-
-These are designed but **not yet implemented**. They are listed as checkboxes in
-[`TODO.md`](./TODO.md); the implementation notes live here. Suggested order:
-**B → A → C → D** (B is a prerequisite for C's popup styling).
-
-### Feature B: Brighter key-press preview *(small)*
-
-**Problem:** `animatePress()` lifts the key view but draws it with the same
-`buttonBodyPaint` as an unpressed key, so the preview looks identical in color.
-
-**Plan:**
-1. In `UiTheme.java`, add a `previewBodyPaint` field, computed as a lightened
-   version of the background, for example
-   `ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.25f)`. This is
-   theme-aware: dark themes lighten, light themes stay readable.
-2. In `KeyboardButtonView.java`, track an `isPreviewActive` boolean (set in
-   `animatePress()`, cleared in `animateRelease()`, `invalidate()` on change).
-   In the body-draw step, pick `previewBodyPaint` when active.
-
-### Feature A: Space-bar cursor navigation, Gboard-style *(moderate)*
-
-**Goal:** long-press Space, then drag horizontally to move the cursor character
-by character (optionally vertical drag for line up/down).
-
-**Plan:**
-1. Add `ACTION_MOVE` handling to `KeyboardButtonView.onTouchEvent`. Once a
-   long-press has fired, accumulate horizontal delta; every ~1 key-width, emit a
-   left/right cursor move and reset the accumulator.
-2. **Axis-lock** on first meaningful movement (horizontal *or* vertical) to avoid
-   diagonal jumping.
-3. Dispatch movement with `InputConnection.sendKeyEvent(KEYCODE_DPAD_LEFT/RIGHT`
-   (and `UP/DOWN`). The app already sends key events this way.
-4. Reuse the existing `longPressedSpaceButton` flag to suppress the space
-   character on release.
-5. Decide what happens to the current space-long-press IME picker: keep it only
-   when no drag occurred, or move it to another gesture.
-
-**Touches:** `KeyboardButtonView.java`, `CodeBoardIME.java`.
-
-### Feature C: Accent / alternate characters on long-press *(medium-large)*
-
-**Goal:** hold a letter to pick an accented variant (for example hold `e` to get
-`é è ê ë ē`).
-
-**Plan:**
-- **Data model:** add `String[] popupCharacters` to `KeyInfo.java`; add a
-  `withPopup(String chars)` builder method to `KeyboardLayoutBuilder.java`;
-  attach accent sets per letter in `Definitions.java` (a shared
-  `Map<Character, String>` keeps all four layouts consistent).
-- **Trigger:** when long-press fires and `popupCharacters != null`, show a popup
-  and suppress the normal key output on release.
-- **Popup UI:** reuse the preview-lift look. Show the alternates as a small row
-  in a `PopupWindow` anchored above the pressed key, drawn with Feature B's
-  `previewBodyPaint`. Tapping one commits it via the existing `onText` path.
-
-**Touches:** `KeyInfo.java`, `KeyboardLayoutBuilder.java`, `Definitions.java`,
-`KeyboardButtonView.java`, `UiTheme.java` (do Feature B first).
-
-### Feature D: Split keyboard for tablets / foldables *(medium, low urgency)*
-
-**Goal:** a centered gap that pushes the left half left and the right half right,
-for thumb typing on wide screens.
-
-**Plan:** because keys use normalized `Box` coordinates, implement the split as a
-post-processing geometry transform in `KeyboardLayoutBuilder.build()`: compress
-left-half keys into `[0, 0.5 - gap]` and right-half keys into `[0.5 + gap, 1.0]`.
-The middle gap has no child views, so touches there are naturally ignored. No
-changes to touch, drawing, or input dispatch are needed. Gate it behind an
-Off/Auto/On preference, where Auto detects wide screens via
-`getResources().getConfiguration().screenWidthDp >= 600`.
-
-**Touches:** `KeyboardLayoutBuilder.java`, `CodeBoardIME.java`,
-`KeyboardPreferences.java`, `res/xml/preferences.xml`.
 
 ---
 
