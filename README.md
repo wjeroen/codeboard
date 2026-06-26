@@ -16,6 +16,7 @@ useful, please consider supporting the original author (see [Credits](#credits--
 
 ## Table of contents
 
+- [Differences from the original](#differences-from-the-original)
 - [Features](#features)
 - [Install](#install)
 - [Build from source](#build-from-source)
@@ -28,6 +29,26 @@ useful, please consider supporting the original author (see [Credits](#credits--
 - [Credits and license](#credits--license)
 
 ---
+
+## Differences from the original
+
+High-level changes in this fork versus
+[gazlaws-dev/codeboard](https://github.com/gazlaws-dev/codeboard). If you are
+deciding whether to switch, this is what to expect:
+
+- **Separate, coexisting app.** Its own app ID (`com.gazlaws.codeboard.fork`),
+  name ("CodeBoard Fork"), and a purple theme, so it installs alongside the
+  original instead of replacing it.
+- **Working signed APK builds** from GitHub Actions, so you can download and
+  install a build without a local toolchain.
+- **Shift+Enter inserts a real newline** in apps where Enter sends (chat apps).
+- **Settings backup:** export and import all settings (custom rows, themes, pins)
+  to a JSON file.
+- **One keyboard entry** in the system switcher (the redundant French one is gone).
+- **Brighter key-press preview**, plus fixes (symbol-row defaults, a third symbol
+  row, the settings banner overlap).
+- **Planned:** accent characters on long-press, space-bar cursor navigation, a
+  split layout, and an advanced clipboard history (see [`TODO.md`](./TODO.md)).
 
 ## Features
 

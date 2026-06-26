@@ -13,6 +13,7 @@ public class UiTheme {
 
     public float buttonBodyPadding = 5.0f;
     public Paint buttonBodyPaint;
+    public Paint previewBodyPaint;
     public float buttonBodyBorderRadius = 8.0f;
     public boolean enablePreview = false;
     public boolean enableBorder;
@@ -22,6 +23,7 @@ public class UiTheme {
     private UiTheme(){
         this.foregroundPaint = new Paint();
         this.buttonBodyPaint = new Paint();
+        this.previewBodyPaint = new Paint();
         backgroundColor = 0xff000000;
     }
 
@@ -39,6 +41,10 @@ public class UiTheme {
         }
         // button body
         theme.buttonBodyPaint.setColor(info.backgroundColor);
+        // brighter "preview" body: a lightened version of the key, drawn while a key is
+        // lifted on press (only when previews are enabled) so the preview clearly stands
+        // out from the unpressed keys.
+        theme.previewBodyPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.3f));
         // foreground
         theme.foregroundPaint.setColor(info.foregroundColor);
         theme.fontHeight = info.fontSize;

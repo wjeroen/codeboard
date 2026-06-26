@@ -27,6 +27,7 @@ public class KeyboardButtonView extends View {
     private Timer timer;
     private String currentLabel = null;
     private boolean isPressed = false;
+    private boolean isPreviewActive = false;
 
     public KeyboardButtonView(Context context, Key key, KeyboardView.OnKeyboardActionListener inputService, UiTheme uiTheme) {
         super(context);
@@ -122,7 +123,9 @@ public class KeyboardButtonView extends View {
         float bottom = this.getHeight() - uiTheme.buttonBodyPadding;
         float rx = uiTheme.buttonBodyBorderRadius;
         float ry = uiTheme.buttonBodyBorderRadius;
-        canvas.drawRoundRect(left, top, right, bottom, rx, ry, uiTheme.buttonBodyPaint);
+        canvas.drawRoundRect(left, top, right, bottom, rx, ry,
+                (isPreviewActive && uiTheme.previewBodyPaint != null)
+                        ? uiTheme.previewBodyPaint : uiTheme.buttonBodyPaint);
     }
 
     private void onPress() {
@@ -188,20 +191,24 @@ public class KeyboardButtonView extends View {
 
     private void animatePress(){
         if (uiTheme.enablePreview){
+            isPreviewActive = true;
             this.setTranslationY(-200.0f);
             this.setScaleX(1.2f);
             this.setScaleY(1.2f);
             this.setElevation(21.0f);
+            invalidate();
         } else {
             this.setAlpha(.1f);
         }
     }
     private void animateRelease() {
         if (uiTheme.enablePreview){
+            isPreviewActive = false;
             this.setTranslationY(0.0f);
             this.setScaleX(1.0f);
             this.setScaleY(1.0f);
             this.setElevation(0.0f);
+            invalidate();
         } else {
             this.animate().alpha(1.0f).setDuration(400);
         }

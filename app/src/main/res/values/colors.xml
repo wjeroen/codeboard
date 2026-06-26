@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App chrome (action bar, intro screens). Deliberately a warm, red-leaning
-         purple so this fork is easy to tell apart from the original (which is indigo).
-         This does NOT affect the keyboard, which is themed separately. -->
-    <color name="colorPrimary">#AD1F8A</color>
-    <color name="colorPrimaryDark">#791660</color>
+    <!-- App chrome (action bar, intro screens). A clear purple so this fork is easy to
+         tell apart from the original (which is indigo blue). This does NOT affect the
+         keyboard, which is themed separately. -->
+    <color name="colorPrimary">#9C27B0</color>
+    <color name="colorPrimaryDark">#7B1FA2</color>
     <color name="colorAccent">#FF4081</color>
     <color name="ic_launcher_background">#3CE2D4</color>
 </resources>

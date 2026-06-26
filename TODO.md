@@ -8,6 +8,10 @@ features are in **Feature Plans** at the bottom of this file. How the app
 actually works (architecture, codebase map, build and install) is in the
 [README](./README.md).
 
+> 📌 **When you add a big feature or behaviour change versus the original**, also
+> record it (high level) in the README's "Differences from the original" section,
+> so people deciding whether to switch know what to expect.
+
 ---
 
 ## Current Sprint
@@ -18,9 +22,6 @@ actually works (architecture, codebase map, build and install) is in the
       The CI build is green; this is the on-device check.
 
 ### Features to Implement
-- [ ] **Feature B: brighter key-press preview** (small). The preview reuses the
-      normal key color, so it looks identical. Add a lightened `previewBodyPaint`.
-      Do this first; Feature C depends on it. (Plan below.)
 - [ ] **Feature A: space-bar cursor navigation** (moderate). Long-press Space and
       drag to move the cursor, Gboard-style. (Plan below.)
 - [ ] **Feature C: accent / long-press alternate characters** (medium-large).
@@ -34,11 +35,7 @@ actually works (architecture, codebase map, build and install) is in the
       items, and how to clear it for privacy.
 
 ### Bug Fixes
-- [ ] **Settings banner overlaps the first rows (fitsSystemWindows applied, needs test):**
-      Added `android:fitsSystemWindows="true"` to the settings layout root. This is most
-      likely an Android 15 edge-to-edge issue (targetSdk 35). If the overlap persists on
-      a device, escalate to proper window-inset handling or the Android 15 edge-to-edge
-      opt-out flag.
+- [ ] (none open)
 
 ### Testing
 - [x] Build the debug APK in CI: run is green, `codeboard-debug` artifact (~5.4 MB) produced (2026-06-25)
@@ -52,9 +49,14 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
-- [x] Recolor the app chrome (action bar, intro screens) to a red-leaning purple
-      (#AD1F8A) so the fork is visually distinct from the original indigo; the keyboard
-      themes are unaffected (2026-06-25)
+- [x] Feature B: brighter key-press preview. Pressed/previewed keys now draw with a
+      lightened `previewBodyPaint` so they stand out (`UiTheme`, `KeyboardButtonView`)
+      (2026-06-26)
+- [x] Recolor the app chrome (action bar in light and dark mode, intro screens) to
+      purple (#9C27B0), distinct from the original indigo. The keyboard themes are
+      unaffected (2026-06-26)
+- [x] Settings banner overlap fixed (confirmed on device) via `fitsSystemWindows` on the
+      settings layout root (2026-06-26)
 - [x] Remove the duplicate French keyboard entry: dropped the fr_FR IME subtype from
       `method.xml` (the layout is chosen in settings, not by subtype) (2026-06-25)
 - [x] Point the in-app "Open on GitHub" link at this fork (wjeroen/codeboard) (2026-06-25)
