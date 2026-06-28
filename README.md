@@ -22,6 +22,7 @@ useful, please consider supporting the original author (see [Credits](#credits--
 - [Build from source](#build-from-source)
 - [Continuous integration (building APKs on GitHub)](#continuous-integration-building-apks-on-github)
 - [Using the keyboard](#using-the-keyboard)
+- [Long-press reference](#long-press-reference)
 - [Settings reference](#settings-reference)
 - [Backup and restore](#backup-and-restore)
 - [Architecture and codebase map](#architecture-and-codebase-map)
@@ -179,6 +180,58 @@ committed, always keep that in secrets.
 - **Shift / Ctrl:** tap to use once. **Long-press Shift or Ctrl to lock** it on.
 - **Long-press Space:** opens the system keyboard picker (switch to another IME).
 - **Hold an arrow key** to auto-repeat it.
+
+---
+
+## Long-press reference
+
+The **QWERTY** layout is Gboard-style. Each letter shows a small **corner symbol**
+(top-right), and **long-pressing** a key opens alternates. Lifting without sliding
+types the **[default]** (shown in brackets); sliding onto another character types
+that one instead. (The visible popup and slide-to-select land in a later build; for
+now, a hold types the default.) The other layouts (AZERTY, Dvorak, QWERTZ) are
+unchanged.
+
+**Corner symbols**
+
+```
+Row 1:  Q %   W \   E |   R =   T [   Y ]   U <   I >   O {   P }
+Row 2:  A @   S #   D €   F -   G &   H -   J +   K (   L )
+Row 3:  Z *   X "   C '   V :   B ;   N !   M ?
+```
+
+**Multi-character popups** (default in `[ ]`):
+
+```
+A → æ ã å ā ɒ ɑ  /  [@] à á â ä ɑ̃
+E → ę ë ē ė ə ɛ̃  /  è [|] é ê ɜ ɛ
+I → ɪ ij į ì ĩ  /  ī ï î [>] í
+O → ɔ̃ œ̃ õ ō ø ò  /  ɔ œ ö ô ó [{]
+U → ũ ù ū ʊ  /  û [<] ú ü
+Y → ʏ ij [ ] ] ÿ ý
+C → ć ['] ç č
+N → ń [!] ñ ŋ ɲ
+S → [#] ß ʃ
+J → [+] j́
+D → [€] $ £ ¥ ¢ ð
+```
+
+**Symbol keys** (corner symbol is the default; some add IPA):
+
+```
+Q [%] ʔ   W [\]   R [=] ʁ ɹ ɾ ʀ   T [[] θ   P [}]
+F [-]   G [&] ɣ   H [-] ɦ   K [(]   L [)]
+Z [*] ʒ   X ["]   V [:] ʌ   B [;]   M [?]
+```
+
+**Bottom row** (`Ctrl  ,  space  .  enter`):
+
+```
+,  (comma)  → [ː] ˈ ˌ
+.  (period) → & % + · " _
+              ; / - : ' @
+              ( ) # ! [,] ?
+```
 
 ---
 

@@ -167,7 +167,7 @@ public class KeyboardButtonView extends View {
         isPressed = false;
 //      NOTE: If the arrow keys move out of the input view, the onRelease is never called
         if (hasPopup()){
-            cancelLongPress();
+            cancelPopupLongPress();
             if (popupLongPressFired){
                 // Stage 1: lifting after a hold types the default popup char. Stage 2 will
                 // type whichever alternate the finger slid onto.
@@ -206,7 +206,7 @@ public class KeyboardButtonView extends View {
     }
 
     private void scheduleLongPress(){
-        cancelLongPress();
+        cancelPopupLongPress();
         longPressRunnable = new Runnable() {
             @Override
             public void run() {
@@ -217,7 +217,7 @@ public class KeyboardButtonView extends View {
         longPressHandler.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
     }
 
-    private void cancelLongPress(){
+    private void cancelPopupLongPress(){
         if (longPressRunnable != null){
             longPressHandler.removeCallbacks(longPressRunnable);
             longPressRunnable = null;
@@ -234,7 +234,7 @@ public class KeyboardButtonView extends View {
 
     private void onCancel(){
         isPressed = false;
-        cancelLongPress();
+        cancelPopupLongPress();
         popupLongPressFired = false;
         if (key.info.isRepeatable){
             stopRepeating();

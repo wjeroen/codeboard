@@ -22,12 +22,13 @@ actually works (architecture, codebase map, build and install) is in the
       The CI build is green; this is the on-device check.
 
 ### Features to Implement
-- [ ] **Feature A: space-bar cursor navigation** (moderate). Long-press Space and
-      drag to move the cursor, Gboard-style. (Plan below.)
-- [ ] **Feature C: accent / long-press alternate characters** (medium-large).
-      Hold a letter to pick `é`, `à`, etc. Builds on Feature B. (Plan below.)
-- [ ] **Feature D: split keyboard for tablets/foldables** (medium, low urgency).
-      Geometry transform on the normalized key boxes. (Plan below.)
+- [ ] **Long-press keyboard, Stage 2: visual popup + slide-to-select.** Show the popup
+      grid above the held key (styled with `previewBodyPaint`) and let the finger slide
+      to choose. Stage 1 (layout, corner symbols, hold-types-the-default) is done.
+      Character spec is in the README "Long-press reference".
+- [ ] **Long-press keyboard, Stage 3: split + spacebar cursor.** Auto-split on wide
+      screens (>= 600dp, duplicating G and V), and drag the spacebar horizontally to
+      move the cursor (no vertical).
 - [ ] **Feature E: clipboard history** (medium-large, not yet designed). Replace the
       current fixed setup (7 manually-set pins plus the single current clipboard) with a
       real, growing history of recently copied items you can scroll and paste from on the
@@ -49,6 +50,9 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Long-press keyboard Stage 1: Gboard-style QWERTY with corner symbols and a
+      hold-types-the-default framework; new bottom row (Ctrl, comma, space, period,
+      enter). Full character spec recorded in the README (2026-06-26)
 - [x] Feature B: brighter key-press preview. Pressed/previewed keys now draw with a
       lightened `previewBodyPaint` so they stand out (`UiTheme`, `KeyboardButtonView`)
       (2026-06-26)
