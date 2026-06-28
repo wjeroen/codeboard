@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.inputmethodservice.KeyboardView;
 import androidx.annotation.NonNull;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +13,7 @@ import android.view.ViewOutlineProvider;
 import android.view.ViewConfiguration;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.PopupWindow;
 
 import com.gazlaws.codeboard.CodeBoardIME;
 import com.gazlaws.codeboard.layout.Box;
@@ -35,6 +37,8 @@ public class KeyboardButtonView extends View {
     private boolean popupLongPressFired = false;
     private final Handler longPressHandler = new Handler(Looper.getMainLooper());
     private Runnable longPressRunnable;
+    private PopupWindow popupWindow;
+    private PopupKeyboardView popupKeyboardView;
 
     public KeyboardButtonView(Context context, Key key, KeyboardView.OnKeyboardActionListener inputService, UiTheme uiTheme) {
         super(context);
@@ -53,6 +57,11 @@ public class KeyboardButtonView extends View {
         switch(action){
             case MotionEvent.ACTION_DOWN:
                 onPress();
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (isPopupShowing()){
+                    popupKeyboardView.updateSelection(e.getRawX(), e.getRawY());
+                }
                 break;
             case MotionEvent.ACTION_UP:
                 onRelease();
@@ -168,9 +177,12 @@ public class KeyboardButtonView extends View {
 //      NOTE: If the arrow keys move out of the input view, the onRelease is never called
         if (hasPopup()){
             cancelPopupLongPress();
-            if (popupLongPressFired){
-                // Stage 1: lifting after a hold types the default popup char. Stage 2 will
-                // type whichever alternate the finger slid onto.
+            if (isPopupShowing()){
+                // Slid onto an alternate (or rested on the default): type the highlighted cell.
+                commitPopupChar(popupKeyboardView.getSelectedChar());
+                dismissPopup();
+            } else if (popupLongPressFired){
+                // Held a key whose popup has no real alternates: type its default char.
                 commitPopupChar(key.info.popupChars[key.info.popupDefaultIndex]);
             } else {
                 submitKeyEvent();
@@ -211,7 +223,9 @@ public class KeyboardButtonView extends View {
             @Override
             public void run() {
                 popupLongPressFired = true;
-                // Stage 2 will show the popup window here.
+                if (key.info.popupChars != null && key.info.popupChars.length >= 2){
+                    showPopup();
+                }
             }
         };
         longPressHandler.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
@@ -232,9 +246,76 @@ public class KeyboardButtonView extends View {
         }
     }
 
+    private boolean isPopupShowing(){
+        return popupWindow != null && popupWindow.isShowing();
+    }
+
+    private void showPopup(){
+        if (key.info.popupChars == null || key.info.popupChars.length < 2){
+            return;
+        }
+        float cellW = getWidth();
+        float cellH = getHeight();
+        int columns = Math.max(1, key.info.popupColumns);
+        int rowCount = (int) Math.ceil(key.info.popupChars.length / (float) columns);
+        int defaultCol = key.info.popupDefaultIndex % columns;
+
+        int[] screenLoc = new int[2];
+        getLocationOnScreen(screenLoc);
+        int[] windowLoc = new int[2];
+        getLocationInWindow(windowLoc);
+
+        int popupW = (int) (columns * cellW);
+        int popupH = (int) (rowCount * cellH);
+
+        // Anchor the popup so its default cell sits directly above the key (column-aligned),
+        // with the bottom row just above the key top. Resting the finger then keeps the default
+        // selected; sliding up/sideways moves the highlight. These are screen-absolute coords.
+        int originX = (int) (screenLoc[0] - defaultCol * cellW);
+        int originY = (int) (screenLoc[1] - rowCount * cellH);
+
+        // Keep the popup fully on screen horizontally.
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        if (originX + popupW > screenW) originX = screenW - popupW;
+        if (originX < 0) originX = 0;
+
+        popupKeyboardView = new PopupKeyboardView(getContext(), uiTheme);
+        popupKeyboardView.configure(key.info, cellW, cellH, originX, originY);
+
+        popupWindow = new PopupWindow(popupKeyboardView, popupW, popupH, false);
+        popupWindow.setClippingEnabled(false);
+        popupWindow.setTouchable(false);
+        popupWindow.setFocusable(false);
+        popupWindow.setBackgroundDrawable(null);
+
+        // showAtLocation wants window coordinates; convert from screen by removing the window's
+        // on-screen offset (screenLoc - windowLoc).
+        int winX = originX - (screenLoc[0] - windowLoc[0]);
+        int winY = originY - (screenLoc[1] - windowLoc[1]);
+        try {
+            popupWindow.showAtLocation(this, Gravity.NO_GRAVITY, winX, winY);
+        } catch (Exception e){
+            // If the window token isn't ready yet, fall back to typing the default on release.
+            popupWindow = null;
+            popupKeyboardView = null;
+        }
+    }
+
+    private void dismissPopup(){
+        if (popupWindow != null){
+            try {
+                popupWindow.dismiss();
+            } catch (Exception ignored){
+            }
+            popupWindow = null;
+        }
+        popupKeyboardView = null;
+    }
+
     private void onCancel(){
         isPressed = false;
         cancelPopupLongPress();
+        dismissPopup();
         popupLongPressFired = false;
         if (key.info.isRepeatable){
             stopRepeating();
@@ -265,7 +346,13 @@ public class KeyboardButtonView extends View {
     }
 
     private void animatePress(){
-        if (uiTheme.enablePreview){
+        if (uiTheme.enablePreview && hasPopup()){
+            // Popup keys: just brighten on press. The alternates grid drawn above the key is
+            // the real preview, so we skip the big "lift" to keep the key's on-screen position
+            // stable (the popup is anchored to it).
+            isPreviewActive = true;
+            invalidate();
+        } else if (uiTheme.enablePreview){
             isPreviewActive = true;
             this.setTranslationY(-200.0f);
             this.setScaleX(1.2f);

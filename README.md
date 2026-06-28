@@ -186,11 +186,10 @@ committed, always keep that in secrets.
 ## Long-press reference
 
 The **QWERTY** layout is Gboard-style. Each letter shows a small **corner symbol**
-(top-right), and **long-pressing** a key opens alternates. Lifting without sliding
-types the **[default]** (shown in brackets); sliding onto another character types
-that one instead. (The visible popup and slide-to-select land in a later build; for
-now, a hold types the default.) The other layouts (AZERTY, Dvorak, QWERTZ) are
-unchanged.
+(top-right), and **long-pressing** a key opens a popup grid of alternates above it.
+Lifting without sliding types the **[default]** (shown in brackets); sliding the
+finger onto another cell highlights it and types that one instead. The other layouts
+(AZERTY, Dvorak, QWERTZ) are unchanged.
 
 **Corner symbols**
 
@@ -277,23 +276,28 @@ small `View`, and the whole keyboard is laid out from normalized coordinates.
 Understanding these few facts explains most of the code:
 
 1. **Each key is a `View`.** A key is a `KeyboardButtonView extends View`. Touch
-   is handled in its `onTouchEvent`, which currently only handles `ACTION_DOWN`
-   and `ACTION_UP` (there is **no** `ACTION_MOVE` handling yet, which is why
-   drag-based features like cursor-on-spacebar are not implemented).
+   is handled in its `onTouchEvent` (`ACTION_DOWN` / `MOVE` / `UP` / `CANCEL`).
+   `ACTION_MOVE` currently drives the long-press alternates popup (sliding the
+   finger to pick a character); the spacebar cursor drag (Stage 3a) is not built yet.
 2. **Geometry is normalized.** Keys are positioned with `Box` coordinates that
    are fractions from 0.0 to 1.0 of the keyboard's width and height. They are
    converted to pixels in `KeyboardButtonView.layout()`. Because geometry is
    purely relative, layout transforms (like a future split keyboard) are easy.
-3. **The "preview" is the key itself, lifted.** When `enablePreview` is on,
-   pressing a key does not show a separate popup. The same key `View` is lifted
-   with `setTranslationY(-200)` + `setScaleX/Y(1.2)` + `setElevation(21)` inside
-   `animatePress()`. It reuses the normal key paint, which is why the preview
-   looks the same color as the key (Feature B in [`TODO.md`](./TODO.md) fixes this).
-4. **Long-press is a `Timer`.** `CodeBoardIME.onPress()` starts a `Timer` that
-   fires `onKeyLongPress()` after `ViewConfiguration.getLongPressTimeout()`.
-   Today `onKeyLongPress` handles shift-lock (code 16), ctrl-lock (code 17), and
-   space (code 32, which opens the IME picker). A `longPressedSpaceButton` flag
-   suppresses the normal space character when space was long-pressed.
+3. **Two kinds of "popup".** (a) The press *preview*: when `enablePreview` is on,
+   pressing an ordinary key lifts the same key `View` with `setTranslationY(-200)`
+   + `setScaleX/Y(1.2)` + `setElevation(21)` in `animatePress()`, now drawn with a
+   brighter `previewBodyPaint` so it stands out. (b) The long-press *alternates*:
+   holding a key that has a popup spec opens a real `PopupKeyboardView` (a grid of
+   alternate characters) inside a non-touchable `PopupWindow` anchored above the
+   key. Those keys skip the big lift so the popup stays anchored to the key's real
+   on-screen position.
+4. **Long-press has two paths.** For modifier and space keys,
+   `CodeBoardIME.onPress()` starts a `Timer` that fires `onKeyLongPress()` after
+   `ViewConfiguration.getLongPressTimeout()`; it handles shift-lock (code 16),
+   ctrl-lock (code 17), and space (code 32, the IME picker), with a
+   `longPressedSpaceButton` flag suppressing the space character. For keys that have
+   an alternates popup, `KeyboardButtonView` runs its **own** `Handler`-based
+   long-press that opens the popup instead.
 
 ### How a key-press becomes text (high level)
 
@@ -322,15 +326,16 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `CodeBoardIME.java` | The IME service. Assembles the keyboard, owns the long-press `Timer`, `onPress` / `onKey` / `onText` / `onKeyLongPress`, and dispatches characters and key events to the active text field. |
 | `layout/Box.java` | Normalized (0.0 to 1.0) rectangle used to position a key. |
 | `layout/Key.java` | Runtime model of a placed key (its `Box` + its `KeyInfo`). |
-| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the arrows row, the copy/paste row, and custom symbol rows. **Accent data for Feature C goes here.** |
+| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows. |
 | `layout/builder/KeyboardLayoutBuilder.java` | Fluent builder that assembles rows/keys and computes the normalized layout. |
 | `layout/builder/KeyboardLayoutRowBuilder.java` | Distributes key widths within a single row. |
-| `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, etc.). **Add `popupCharacters` here for Feature C.** |
+| `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, plus the long-press fields `cornerLabel` / `popupChars` / `popupDefaultIndex` / `popupColumns`). |
 | `layout/builder/KeyboardLayoutException.java` | Thrown on malformed layout definitions. |
-| `layout/ui/KeyboardButtonView.java` | The per-key `View`: drawing, touch (`onTouchEvent`), and the press animation (`animatePress` / `animateRelease`). |
+| `layout/ui/KeyboardButtonView.java` | The per-key `View`: drawing, touch (`onTouchEvent`), the press animation (`animatePress` / `animateRelease`), and the long-press alternates popup (`showPopup` / `PopupWindow`). |
+| `layout/ui/PopupKeyboardView.java` | The grid of long-press alternates drawn above a held key. Display-only: the key view forwards absolute finger coordinates so this view can highlight the cell under the finger; the key view reads `getSelectedChar()` on release. |
 | `layout/ui/KeyboardLayoutView.java` | The container `ViewGroup` that lays out all the key views from their `Box` coordinates. |
 | `layout/ui/KeyboardUiFactory.java` | Builds the view hierarchy for a given layout + theme. |
-| `theme/UiTheme.java` | The `Paint`s and colors the views draw with. **Add `previewBodyPaint` here for Feature B.** |
+| `theme/UiTheme.java` | The `Paint`s and colors the views draw with, including `previewBodyPaint` (brighter pressed key / popup cell), `popupSelectedPaint` (the highlighted alternate), and `cornerPaint` (the small corner symbol). |
 | `theme/ThemeDefinitions.java` | The seven built-in theme presets. |
 | `theme/ThemeInfo.java` | Data holder for a single theme's colors. |
 | `theme/IOnFocusListenable.java` | Small focus-callback interface. |

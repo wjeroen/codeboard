@@ -22,10 +22,6 @@ actually works (architecture, codebase map, build and install) is in the
       The CI build is green; this is the on-device check.
 
 ### Features to Implement
-- [ ] **Long-press keyboard, Stage 2: visual popup + slide-to-select.** Show the popup
-      grid above the held key (styled with `previewBodyPaint`) and let the finger slide
-      to choose. Stage 1 (layout, corner symbols, hold-types-the-default) is done.
-      Character spec is in the README "Long-press reference".
 - [ ] **Long-press keyboard, Stage 3: split + spacebar cursor.** Auto-split on wide
       screens (>= 600dp, duplicating G and V), and drag the spacebar horizontally to
       move the cursor (no vertical).
@@ -50,6 +46,15 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Long-press keyboard Stage 2: holding a key now shows a real popup grid of
+      alternates above it (new `PopupKeyboardView` + a non-touchable `PopupWindow`
+      in `KeyboardButtonView`). Slide the finger onto a cell to pick it; resting on
+      the default and lifting types the bracketed default. Selected cell is the
+      brightest (`popupSelectedPaint`) (2026-06-28)
+- [x] Made the corner symbols a bit larger (`cornerPaint` text size 0.62× the key
+      font, was smaller) so they're readable (2026-06-28)
+- [x] Turned popup/key previews on by default and removed the now-pointless toggle
+      from settings (`default_keyboard_preferences.xml`, `preferences.xml`) (2026-06-28)
 - [x] Long-press keyboard Stage 1: Gboard-style QWERTY with corner symbols and a
       hold-types-the-default framework; new bottom row (Ctrl, comma, space, period,
       enter). Full character spec recorded in the README (2026-06-26)
@@ -100,35 +105,24 @@ actually works (architecture, codebase map, build and install) is in the
 - [ ] Credit the original author / upstream in the in-app About screen.
 - [ ] Pick a permanent name and app ID for the fork (currently the placeholder
       "CodeBoard Fork" and `com.gazlaws.codeboard.fork`).
-- [ ] Per-layout accent maps (extends Feature C) for AZERTY / QWERTZ users.
-- [ ] Optional vertical drag for line navigation in Feature A.
+- [ ] Per-layout accent maps (extends the long-press alternates) for AZERTY / QWERTZ users.
+- [ ] Optional vertical drag for line navigation in Stage 3a (spacebar cursor).
 
 ---
 
 ## Feature Plans
 
-Detailed plans for the checklist items above. Suggested order: **B, A, C, D**
-(B is a prerequisite for C's popup styling). Paths are under
+The only remaining planned work is **Stage 3** of the long-press keyboard, which has
+two independent parts, planned below: **Spacebar cursor** (was "Feature A") and
+**Split keyboard** (was "Feature D"). Paths are under
 `app/src/main/java/com/gazlaws/codeboard/`; see the README codebase map for where
 each file lives.
 
-### Feature B: Brighter key-press preview (small)
+> Feature B (brighter preview) and Feature C (long-press alternates, Stages 1-2) are
+> done, see Completed Recently and the README "Long-press reference". Their old plans
+> were removed from here to keep this list current.
 
-**Problem:** `animatePress()` lifts the key view but draws it with the same
-`buttonBodyPaint` as an unpressed key, so the preview looks identical in color.
-
-**Plan:**
-1. In `theme/UiTheme.java`, add a `previewBodyPaint` field, computed as a
-   lightened version of the background, for example
-   `ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.25f)`. Theme-aware:
-   dark themes lighten, light themes stay readable.
-2. In `layout/ui/KeyboardButtonView.java`, track an `isPreviewActive` boolean (set
-   in `animatePress()`, cleared in `animateRelease()`, `invalidate()` on change).
-   In the body-draw step, pick `previewBodyPaint` when active.
-
-**Touches:** `theme/UiTheme.java`, `layout/ui/KeyboardButtonView.java`.
-
-### Feature A: Space-bar cursor navigation, Gboard-style (moderate)
+### Stage 3a: Space-bar cursor navigation, Gboard-style (moderate)
 
 **Goal:** long-press Space, then drag horizontally to move the cursor character by
 character (optionally vertical drag for line up/down).
@@ -148,38 +142,19 @@ character (optionally vertical drag for line up/down).
 
 **Touches:** `layout/ui/KeyboardButtonView.java`, `CodeBoardIME.java`.
 
-### Feature C: Accent / alternate characters on long-press (medium-large)
-
-**Goal:** hold a letter to pick an accented variant (for example hold `e` to get
-`é è ê ë ē`).
-
-**Plan:**
-- **Data model:** add `String[] popupCharacters` to `layout/builder/KeyInfo.java`;
-  add a `withPopup(String chars)` builder method to
-  `layout/builder/KeyboardLayoutBuilder.java`; attach accent sets per letter in
-  `layout/Definitions.java` (a shared `Map<Character, String>` keeps all four
-  layouts consistent).
-- **Trigger:** when long-press fires and `popupCharacters != null`, show a popup
-  and suppress the normal key output on release.
-- **Popup UI:** reuse the preview-lift look. Show the alternates as a small row in
-  a `PopupWindow` anchored above the pressed key, drawn with Feature B's
-  `previewBodyPaint`. Tapping one commits it via the existing `onText` path.
-
-**Touches:** `layout/builder/KeyInfo.java`,
-`layout/builder/KeyboardLayoutBuilder.java`, `layout/Definitions.java`,
-`layout/ui/KeyboardButtonView.java`, `theme/UiTheme.java` (do Feature B first).
-
-### Feature D: Split keyboard for tablets / foldables (medium, low urgency)
+### Stage 3b: Split keyboard for tablets / foldables (medium, low urgency)
 
 **Goal:** a centered gap that pushes the left half left and the right half right,
-for thumb typing on wide screens.
+for thumb typing on wide screens. Per the agreed spec, the inner letters G and V are
+duplicated so each half has its own, and the bottom row (Ctrl, comma, space, period,
+enter) does **not** split.
 
 **Plan:** because keys use normalized `Box` coordinates, implement the split as a
 post-processing geometry transform in `KeyboardLayoutBuilder.build()`: compress
-left-half keys into `[0, 0.5 - gap]` and right-half keys into `[0.5 + gap, 1.0]`.
-The middle gap has no child views, so touches there are naturally ignored. No
-changes to touch, drawing, or input dispatch are needed. Gate it behind an
-Off/Auto/On preference, where Auto detects wide screens via
+left-half keys into `[0, 0.5 - gap]` and right-half keys into `[0.5 + gap, 1.0]`,
+leaving the bottom row full-width. The middle gap has no child views, so touches
+there are naturally ignored. No changes to touch, drawing, or input dispatch are
+needed. Gate it behind an Off/Auto/On preference, where Auto detects wide screens via
 `getResources().getConfiguration().screenWidthDp >= 600`.
 
 **Touches:** `layout/builder/KeyboardLayoutBuilder.java`, `CodeBoardIME.java`,

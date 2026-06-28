@@ -14,6 +14,7 @@ public class UiTheme {
     public float buttonBodyPadding = 5.0f;
     public Paint buttonBodyPaint;
     public Paint previewBodyPaint;
+    public Paint popupSelectedPaint;
     public Paint cornerPaint;
     public float buttonBodyBorderRadius = 8.0f;
     public boolean enablePreview = false;
@@ -25,6 +26,7 @@ public class UiTheme {
         this.foregroundPaint = new Paint();
         this.buttonBodyPaint = new Paint();
         this.previewBodyPaint = new Paint();
+        this.popupSelectedPaint = new Paint();
         this.cornerPaint = new Paint();
         backgroundColor = 0xff000000;
     }
@@ -43,10 +45,10 @@ public class UiTheme {
         }
         // button body
         theme.buttonBodyPaint.setColor(info.backgroundColor);
-        // brighter "preview" body: a lightened version of the key, drawn while a key is
-        // lifted on press (only when previews are enabled) so the preview clearly stands
-        // out from the unpressed keys.
+        // brighter "preview" body, reused for long-press popup cells
         theme.previewBodyPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.3f));
+        // even brighter highlight for the currently-selected popup cell
+        theme.popupSelectedPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.55f));
         // foreground
         theme.foregroundPaint.setColor(info.foregroundColor);
         theme.fontHeight = info.fontSize;
@@ -54,10 +56,10 @@ public class UiTheme {
         theme.foregroundPaint.setTextAlign(Paint.Align.CENTER);
         theme.foregroundPaint.setAntiAlias(true);
         theme.foregroundPaint.setTypeface(Typeface.DEFAULT);
-        // corner symbol: smaller, slightly dimmed foreground, drawn top-right
+        // corner symbol: a bit larger now, slightly dimmed foreground, drawn top-right
         theme.cornerPaint.setColor(info.foregroundColor);
-        theme.cornerPaint.setAlpha(160);
-        theme.cornerPaint.setTextSize(theme.fontHeight * 0.5f);
+        theme.cornerPaint.setAlpha(170);
+        theme.cornerPaint.setTextSize(theme.fontHeight * 0.62f);
         theme.cornerPaint.setTextAlign(Paint.Align.RIGHT);
         theme.cornerPaint.setAntiAlias(true);
         theme.cornerPaint.setTypeface(Typeface.DEFAULT);

@@ -45,10 +45,6 @@
             android:title="@string/keyboard_size_landscape"
             app:useSimpleSummaryProvider="true" />
         <SwitchPreferenceCompat
-            android:defaultValue="@bool/preview"
-            android:key="preview"
-            android:title="@string/preview" />
-        <SwitchPreferenceCompat
             android:defaultValue="@bool/notification"
             android:title="Open keyboard using notification"
             android:key="notification" />
