@@ -14,6 +14,7 @@ public class UiTheme {
     public float buttonBodyPadding = 5.0f;
     public Paint buttonBodyPaint;
     public Paint previewBodyPaint;
+    public Paint cornerPaint;
     public float buttonBodyBorderRadius = 8.0f;
     public boolean enablePreview = false;
     public boolean enableBorder;
@@ -24,6 +25,7 @@ public class UiTheme {
         this.foregroundPaint = new Paint();
         this.buttonBodyPaint = new Paint();
         this.previewBodyPaint = new Paint();
+        this.cornerPaint = new Paint();
         backgroundColor = 0xff000000;
     }
 
@@ -52,6 +54,13 @@ public class UiTheme {
         theme.foregroundPaint.setTextAlign(Paint.Align.CENTER);
         theme.foregroundPaint.setAntiAlias(true);
         theme.foregroundPaint.setTypeface(Typeface.DEFAULT);
+        // corner symbol: smaller, slightly dimmed foreground, drawn top-right
+        theme.cornerPaint.setColor(info.foregroundColor);
+        theme.cornerPaint.setAlpha(160);
+        theme.cornerPaint.setTextSize(theme.fontHeight * 0.5f);
+        theme.cornerPaint.setTextAlign(Paint.Align.RIGHT);
+        theme.cornerPaint.setAntiAlias(true);
+        theme.cornerPaint.setTypeface(Typeface.DEFAULT);
 
         return theme;
     }

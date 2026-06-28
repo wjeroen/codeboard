@@ -172,4 +172,29 @@ public class KeyboardLayoutBuilder {
     public KeyboardLayoutBuilder addEnterKey(){
         return addKey(context.getDrawable(R.drawable.ic_keyboard_return_24dp), -4).withSize(1.5f);
     }
+
+    // --- Gboard-style long-press popups ---------------------------------------
+
+    private void setPopup(int columns, String defaultChar, String[] chars){
+        currentKey.popupChars = chars;
+        currentKey.popupColumns = columns;
+        int idx = 0;
+        for (int i = 0; i < chars.length; i++){
+            if (chars[i].equals(defaultChar)){ idx = i; break; }
+        }
+        currentKey.popupDefaultIndex = idx;
+    }
+
+    /** Letter keys: sets the popup and also shows the default char as the corner symbol. */
+    public KeyboardLayoutBuilder withPopup(int columns, String defaultChar, String... chars){
+        setPopup(columns, defaultChar, chars);
+        currentKey.cornerLabel = defaultChar;
+        return this;
+    }
+
+    /** Punctuation keys (comma/period): a popup but no corner symbol. */
+    public KeyboardLayoutBuilder withPopupNoCorner(int columns, String defaultChar, String... chars){
+        setPopup(columns, defaultChar, chars);
+        return this;
+    }
 }

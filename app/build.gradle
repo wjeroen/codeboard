@@ -51,6 +51,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    compileOptions {
+        // Source files now contain accented and IPA literals; pin the encoding so the
+        // compiler reads them correctly regardless of the build machine's default.
+        encoding = 'UTF-8'
+    }
     testOptions {
         unitTests.includeAndroidResources = true
     }

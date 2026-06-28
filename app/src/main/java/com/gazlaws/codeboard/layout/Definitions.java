@@ -251,4 +251,57 @@ public class Definitions {
 
     }
 
+    // Gboard-style QWERTY: every letter carries a corner symbol and a long-press popup.
+    // Popup chars are listed in on-screen order (top-left to bottom-right); the second
+    // argument of withPopup is the default (typed on a hold-and-lift without sliding).
+    public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard) {
+        keyboard.newRow()
+                .addKey('q').onShiftUppercase().withPopup(2, "%", "%", "ʔ")
+                .addKey('w').onShiftUppercase().withPopup(1, "\\", "\\")
+                .addKey('e').onShiftUppercase().withPopup(6, "|", "ę","ë","ē","ė","ə","ɛ̃", "è","|","é","ê","ɜ","ɛ")
+                .addKey('r').onShiftUppercase().withPopup(5, "=", "=","ʁ","ɹ","ɾ","ʀ")
+                .addKey('t').onShiftUppercase().withPopup(2, "[", "[", "θ")
+                .addKey('y').onShiftUppercase().withPopup(5, "]", "ʏ","ij","]","ÿ","ý")
+                .addKey('u').onShiftUppercase().withPopup(4, "<", "ũ","ù","ū","ʊ", "û","<","ú","ü")
+                .addKey('i').onShiftUppercase().withPopup(5, ">", "ɪ","ij","į","ì","ĩ", "ī","ï","î",">","í")
+                .addKey('o').onShiftUppercase().withPopup(6, "{", "ɔ̃","œ̃","õ","ō","ø","ò", "ɔ","œ","ö","ô","ó","{")
+                .addKey('p').onShiftUppercase().withPopup(1, "}", "}")
+                .newRow()
+                .addKey('a').onShiftUppercase().withSize(1.5f).withPopup(6, "@", "æ","ã","å","ā","ɒ","ɑ", "@","à","á","â","ä","ɑ̃")
+                .addKey('s').onShiftUppercase().withPopup(3, "#", "#","ß","ʃ")
+                .addKey('d').onShiftUppercase().withPopup(6, "€", "€","$","£","¥","¢","ð")
+                .addKey('f').onShiftUppercase().withPopup(1, "-", "-")
+                .addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ")
+                .addKey('h').onShiftUppercase().withPopup(2, "-", "-","ɦ")
+                .addKey('j').onShiftUppercase().withPopup(2, "+", "+","j́")
+                .addKey('k').onShiftUppercase().withPopup(1, "(", "(")
+                .addKey('l').onShiftUppercase().withSize(1.5f).withPopup(1, ")", ")")
+                .newRow()
+                .addShiftKey()
+                .addKey('z').onShiftUppercase().withPopup(2, "*", "*","ʒ")
+                .addKey('x').onShiftUppercase().withPopup(1, "\"", "\"")
+                .addKey('c').onShiftUppercase().withPopup(4, "'", "ć","'","ç","č")
+                .addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ")
+                .addKey('b').onShiftUppercase().withPopup(1, ";", ";")
+                .addKey('n').onShiftUppercase().withPopup(5, "!", "ń","!","ñ","ŋ","ɲ")
+                .addKey('m').onShiftUppercase().withPopup(1, "?", "?")
+                .addBackspaceKey()
+        ;
+    }
+
+    // Bottom row for the Gboard QWERTY: Ctrl, comma, space, period, enter.
+    // Period carries the punctuation popup; comma carries the IPA stress/length marks.
+    public void addGboardBottomRow(KeyboardLayoutBuilder keyboard) {
+        keyboard.newRow()
+                .addKey("Ctrl", 17).asModifier().onCtrlShow("CTRL")
+                .addKey(',').withPopupNoCorner(3, "ː", "ː","ˈ","ˌ")
+                .addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32).withSize(4f)
+                .addKey('.').withPopupNoCorner(6, ",",
+                        "&","%","+","·","\"","_",
+                        ";","/","-",":","'","@",
+                        "(",")","#","!",",","?")
+                .addEnterKey()
+        ;
+    }
+
 }

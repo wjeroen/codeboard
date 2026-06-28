@@ -456,6 +456,28 @@ public class CodeBoardIME extends InputMethodService
         clearLongPressTimer();
     }
 
+    /**
+     * Commit a character chosen from a long-press popup. Applies the active shift
+     * (uppercase) and consumes a non-locked shift, like a normal letter key.
+     */
+    public void onPopupCharacter(CharSequence text) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) {
+            return;
+        }
+        CharSequence out = text;
+        if (shift) {
+            out = text.toString().toUpperCase();
+            if (!shiftLock) {
+                shift = false;
+                ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT));
+                shiftKeyUpdateView();
+            }
+        }
+        ic.commitText(out, 1);
+        clearLongPressTimer();
+    }
+
     @Override
     public void swipeLeft() {
 
@@ -564,22 +586,25 @@ public class CodeBoardIME extends InputMethodService
                 if (!mCustomSymbolsMain2.isEmpty()) {
                     Definitions.addCustomRow(builder, mCustomSymbolsMain2);
                 }
-                switch (mLayout) {
-                    default:
-                    case 0:
-                        Definitions.addQwertyRows(builder);
-                        break;
-                    case 1:
-                        Definitions.addAzertyRows(builder);
-                        break;
-                    case 2:
-                        Definitions.addDvorakRows(builder);
-                        break;
-                    case 3:
-                        Definitions.addQwertzRows(builder);
-                        break;
+                if (mLayout == 0) {
+                    // Gboard-style QWERTY: corner symbols + long-press popups, and a
+                    // dedicated bottom row (Ctrl, comma, space, period, enter).
+                    Definitions.addGboardQwertyRows(builder);
+                    definitions.addGboardBottomRow(builder);
+                } else {
+                    switch (mLayout) {
+                        case 1:
+                            Definitions.addAzertyRows(builder);
+                            break;
+                        case 2:
+                            Definitions.addDvorakRows(builder);
+                            break;
+                        case 3:
+                            Definitions.addQwertzRows(builder);
+                            break;
+                    }
+                    definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);
                 }
-                definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);
             } else if (mKeyboardState == R.integer.keyboard_clipboard) {
                 definitions.addClipboardActions(builder);
 

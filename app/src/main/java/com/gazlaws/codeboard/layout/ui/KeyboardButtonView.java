@@ -9,7 +9,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
+import android.view.ViewConfiguration;
+import android.os.Handler;
+import android.os.Looper;
 
+import com.gazlaws.codeboard.CodeBoardIME;
 import com.gazlaws.codeboard.layout.Box;
 import com.gazlaws.codeboard.layout.Key;
 import com.gazlaws.codeboard.theme.UiTheme;
@@ -28,6 +32,9 @@ public class KeyboardButtonView extends View {
     private String currentLabel = null;
     private boolean isPressed = false;
     private boolean isPreviewActive = false;
+    private boolean popupLongPressFired = false;
+    private final Handler longPressHandler = new Handler(Looper.getMainLooper());
+    private Runnable longPressRunnable;
 
     public KeyboardButtonView(Context context, Key key, KeyboardView.OnKeyboardActionListener inputService, UiTheme uiTheme) {
         super(context);
@@ -49,6 +56,9 @@ public class KeyboardButtonView extends View {
                 break;
             case MotionEvent.ACTION_UP:
                 onRelease();
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                onCancel();
                 break;
             default:
                 break;
@@ -92,6 +102,14 @@ public class KeyboardButtonView extends View {
         float y = this.getHeight()/2 + uiTheme.fontHeight/3;
         canvas.drawText(currentLabel, x, y, uiTheme.foregroundPaint);
 
+        if (key.info.cornerLabel != null){
+            float pad = uiTheme.buttonBodyPadding * 2.5f;
+            canvas.drawText(key.info.cornerLabel,
+                    this.getWidth() - pad,
+                    pad + uiTheme.cornerPaint.getTextSize(),
+                    uiTheme.cornerPaint);
+        }
+
         if (key.info.icon != null){
             Drawable d = key.info.icon;
             d.setTint(uiTheme.foregroundPaint.getColor());
@@ -130,19 +148,34 @@ public class KeyboardButtonView extends View {
 
     private void onPress() {
         isPressed = true;
-//        if (key.info.code != 0){
-            inputService.onPress(key.info.code);
-//        }
+        popupLongPressFired = false;
+        inputService.onPress(key.info.code);
         if (key.info.isRepeatable){
             startRepeating();
         }
-        submitKeyEvent();
+        if (hasPopup()){
+            // Defer output: a quick tap types the key on release, a long hold opens the
+            // popup (Stage 2) and types the selected alternate instead.
+            scheduleLongPress();
+        } else {
+            submitKeyEvent();
+        }
         animatePress();
     }
 
     private void onRelease() {
         isPressed = false;
 //      NOTE: If the arrow keys move out of the input view, the onRelease is never called
+        if (hasPopup()){
+            cancelLongPress();
+            if (popupLongPressFired){
+                // Stage 1: lifting after a hold types the default popup char. Stage 2 will
+                // type whichever alternate the finger slid onto.
+                commitPopupChar(key.info.popupChars[key.info.popupDefaultIndex]);
+            } else {
+                submitKeyEvent();
+            }
+        }
         if (key.info.code != 0){
             inputService.onRelease(key.info.code);
         }
@@ -150,6 +183,7 @@ public class KeyboardButtonView extends View {
             stopRepeating();
         }
         animateRelease();
+        popupLongPressFired = false;
     }
 
     private void submitKeyEvent(){
@@ -165,6 +199,47 @@ public class KeyboardButtonView extends View {
         if (isPressed){
             onRelease();
         }
+    }
+
+    private boolean hasPopup(){
+        return key.info.popupChars != null && key.info.popupChars.length > 0;
+    }
+
+    private void scheduleLongPress(){
+        cancelLongPress();
+        longPressRunnable = new Runnable() {
+            @Override
+            public void run() {
+                popupLongPressFired = true;
+                // Stage 2 will show the popup window here.
+            }
+        };
+        longPressHandler.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
+    }
+
+    private void cancelLongPress(){
+        if (longPressRunnable != null){
+            longPressHandler.removeCallbacks(longPressRunnable);
+            longPressRunnable = null;
+        }
+    }
+
+    private void commitPopupChar(String text){
+        if (inputService instanceof CodeBoardIME){
+            ((CodeBoardIME) inputService).onPopupCharacter(text);
+        } else {
+            inputService.onText(text);
+        }
+    }
+
+    private void onCancel(){
+        isPressed = false;
+        cancelLongPress();
+        popupLongPressFired = false;
+        if (key.info.isRepeatable){
+            stopRepeating();
+        }
+        animateRelease();
     }
 
     private void stopRepeating() {
