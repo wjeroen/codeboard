@@ -27,6 +27,9 @@ public class KeyboardUiFactory {
         UiTheme uiTheme = UiTheme.buildFromInfo(this.theme);
         KeyboardLayoutView layout = createKeyGroupView(context, uiTheme);
         for (Key key :keys){
+            if (key.info.isSpacer){
+                continue; // gap: reserves layout space but has no view
+            }
             RelativeLayout.LayoutParams params = getKeyLayoutParams(key);
             View view = createKeyView(context, key, uiTheme);
             layout.addView(view,params);

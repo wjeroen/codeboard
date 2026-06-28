@@ -85,6 +85,22 @@ public class KeyboardLayoutBuilder {
         return this.addKey(label, 0).withOutputText(label);
     }
 
+    /** Adds an empty spacer that reserves {@code size} units of row width but renders no
+     *  key (no view, no touch). Use it to inset a row, like a stock Android home row. */
+    public KeyboardLayoutBuilder addGap(float size)
+    {
+        if (currentRow == null){
+            newRow();
+        }
+        currentKey = new KeyInfo();
+        currentKey.label = "";
+        currentKey.code = 0;
+        currentKey.size = size;
+        currentKey.isSpacer = true;
+        currentRow.addKey(currentKey);
+        return this;
+    }
+
     public KeyboardLayoutBuilder asRepeatable(boolean repeat){
         currentKey.isRepeatable = repeat;
         return this;

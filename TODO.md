@@ -46,6 +46,12 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Long-press polish: pressing a key now instantly previews just that character
+      (the key magnifies, corner symbol hidden); holding for 300ms (Gboard's default
+      long-press delay) turns the preview into the alternates grid. Single-option keys
+      now show a one-cell popup too. Made `a`/`l` the same width as the other letters
+      with half-key gaps on the home-row ends (new `addGap` spacer; dropped their 1.5x
+      size) (2026-06-28)
 - [x] Long-press keyboard Stage 2: holding a key now shows a real popup grid of
       alternates above it (new `PopupKeyboardView` + a non-touchable `PopupWindow`
       in `KeyboardButtonView`). Slide the finger onto a cell to pick it; resting on

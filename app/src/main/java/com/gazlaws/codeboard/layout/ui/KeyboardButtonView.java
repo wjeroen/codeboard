@@ -10,7 +10,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
-import android.view.ViewConfiguration;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.PopupWindow;
@@ -26,6 +25,8 @@ import java.util.TimerTask;
 public class KeyboardButtonView extends View {
 
     private static final String TAG = "KeyboardButtonView";
+    // Gboard's default "key long press delay" is 300ms; the alternates grid opens then.
+    private static final int POPUP_DELAY_MS = 300;
 
     private final Key key;
     private final KeyboardView.OnKeyboardActionListener inputService;
@@ -111,7 +112,10 @@ public class KeyboardButtonView extends View {
         float y = this.getHeight()/2 + uiTheme.fontHeight/3;
         canvas.drawText(currentLabel, x, y, uiTheme.foregroundPaint);
 
-        if (key.info.cornerLabel != null){
+        // Hide the corner symbol while the key is lifted as a preview, so the instant preview
+        // shows only the character you pressed. The corner/alternates appear in the popup grid
+        // after the long-press delay instead.
+        if (key.info.cornerLabel != null && !isPreviewActive){
             float pad = uiTheme.buttonBodyPadding * 2.5f;
             canvas.drawText(key.info.cornerLabel,
                     this.getWidth() - pad,
@@ -223,12 +227,12 @@ public class KeyboardButtonView extends View {
             @Override
             public void run() {
                 popupLongPressFired = true;
-                if (key.info.popupChars != null && key.info.popupChars.length >= 2){
+                if (key.info.popupChars != null && key.info.popupChars.length >= 1){
                     showPopup();
                 }
             }
         };
-        longPressHandler.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
+        longPressHandler.postDelayed(longPressRunnable, POPUP_DELAY_MS);
     }
 
     private void cancelPopupLongPress(){
@@ -251,9 +255,18 @@ public class KeyboardButtonView extends View {
     }
 
     private void showPopup(){
-        if (key.info.popupChars == null || key.info.popupChars.length < 2){
+        if (key.info.popupChars == null || key.info.popupChars.length < 1){
             return;
         }
+        // End the instant lift preview first, so the key is back at its true position before we
+        // measure where to anchor the popup grid.
+        isPreviewActive = false;
+        setTranslationY(0f);
+        setScaleX(1f);
+        setScaleY(1f);
+        setElevation(0f);
+        invalidate();
+
         float cellW = getWidth();
         float cellH = getHeight();
         int columns = Math.max(1, key.info.popupColumns);
@@ -346,13 +359,10 @@ public class KeyboardButtonView extends View {
     }
 
     private void animatePress(){
-        if (uiTheme.enablePreview && hasPopup()){
-            // Popup keys: just brighten on press. The alternates grid drawn above the key is
-            // the real preview, so we skip the big "lift" to keep the key's on-screen position
-            // stable (the popup is anchored to it).
-            isPreviewActive = true;
-            invalidate();
-        } else if (uiTheme.enablePreview){
+        if (uiTheme.enablePreview){
+            // Instant preview: the pressed key magnifies in place, showing just the character
+            // (its corner symbol is hidden while lifted, see drawButtonContent). If the key is
+            // held past the long-press delay, showPopup() ends this lift and opens the grid.
             isPreviewActive = true;
             this.setTranslationY(-200.0f);
             this.setScaleX(1.2f);

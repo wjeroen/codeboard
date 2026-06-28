@@ -72,4 +72,10 @@ public class KeyInfo {
      * Number of columns the popup is laid out in
      */
     public int popupColumns;
+
+    /**
+     * Spacer/gap: reserves horizontal space in its row but renders no key (no view, no
+     * touch target). Used to inset a row, e.g. half-key gaps on the ends of the home row.
+     */
+    public boolean isSpacer;
 }

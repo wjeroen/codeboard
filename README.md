@@ -186,10 +186,14 @@ committed, always keep that in secrets.
 ## Long-press reference
 
 The **QWERTY** layout is Gboard-style. Each letter shows a small **corner symbol**
-(top-right), and **long-pressing** a key opens a popup grid of alternates above it.
-Lifting without sliding types the **[default]** (shown in brackets); sliding the
-finger onto another cell highlights it and types that one instead. The other layouts
-(AZERTY, Dvorak, QWERTZ) are unchanged.
+(top-right). **Pressing** a key instantly previews just that character (the key
+magnifies in place, with the corner symbol hidden). **Holding** for 300ms (Gboard's
+default long-press delay) turns that preview into a popup grid of alternates above
+the key: the **[default]** (shown in brackets, which is also the corner symbol) plus
+every option. Lifting without sliding types the default; sliding the finger onto
+another cell highlights it and types that one instead. Single-option keys work the
+same way, they just show one cell. The other layouts (AZERTY, Dvorak, QWERTZ) are
+unchanged.
 
 **Corner symbols**
 
@@ -283,14 +287,16 @@ Understanding these few facts explains most of the code:
    are fractions from 0.0 to 1.0 of the keyboard's width and height. They are
    converted to pixels in `KeyboardButtonView.layout()`. Because geometry is
    purely relative, layout transforms (like a future split keyboard) are easy.
-3. **Two kinds of "popup".** (a) The press *preview*: when `enablePreview` is on,
-   pressing an ordinary key lifts the same key `View` with `setTranslationY(-200)`
-   + `setScaleX/Y(1.2)` + `setElevation(21)` in `animatePress()`, now drawn with a
-   brighter `previewBodyPaint` so it stands out. (b) The long-press *alternates*:
-   holding a key that has a popup spec opens a real `PopupKeyboardView` (a grid of
-   alternate characters) inside a non-touchable `PopupWindow` anchored above the
-   key. Those keys skip the big lift so the popup stays anchored to the key's real
-   on-screen position.
+3. **Press preview, then long-press alternates.** (a) The instant *preview*: when
+   `enablePreview` is on, pressing any key lifts the same key `View` with
+   `setTranslationY(-200)` + `setScaleX/Y(1.2)` + `setElevation(21)` in
+   `animatePress()`, drawn with a brighter `previewBodyPaint`. While lifted, the
+   corner symbol is hidden (`drawButtonContent`), so the preview shows only the
+   character pressed. (b) The *alternates*: holding a key with a popup spec for
+   `POPUP_DELAY_MS` (300ms) ends the lift and opens a `PopupKeyboardView` (a grid of
+   alternates) in a non-touchable `PopupWindow` anchored above the key. `showPopup()`
+   resets the lift transform before measuring so the grid anchors to the key's true
+   position.
 4. **Long-press has two paths.** For modifier and space keys,
    `CodeBoardIME.onPress()` starts a `Timer` that fires `onKeyLongPress()` after
    `ViewConfiguration.getLongPressTimeout()`; it handles shift-lock (code 16),
@@ -329,7 +335,7 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows. |
 | `layout/builder/KeyboardLayoutBuilder.java` | Fluent builder that assembles rows/keys and computes the normalized layout. |
 | `layout/builder/KeyboardLayoutRowBuilder.java` | Distributes key widths within a single row. |
-| `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, plus the long-press fields `cornerLabel` / `popupChars` / `popupDefaultIndex` / `popupColumns`). |
+| `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, the long-press fields `cornerLabel` / `popupChars` / `popupDefaultIndex` / `popupColumns`, and `isSpacer` for empty gap "keys"). |
 | `layout/builder/KeyboardLayoutException.java` | Thrown on malformed layout definitions. |
 | `layout/ui/KeyboardButtonView.java` | The per-key `View`: drawing, touch (`onTouchEvent`), the press animation (`animatePress` / `animateRelease`), and the long-press alternates popup (`showPopup` / `PopupWindow`). |
 | `layout/ui/PopupKeyboardView.java` | The grid of long-press alternates drawn above a held key. Display-only: the key view forwards absolute finger coordinates so this view can highlight the cell under the finger; the key view reads `getSelectedChar()` on release. |
