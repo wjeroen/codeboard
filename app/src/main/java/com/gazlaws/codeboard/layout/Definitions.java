@@ -9,6 +9,9 @@ public class Definitions {
     private Context context;
     private static final int CODE_ESCAPE = -2;
     private static final int CODE_SYMBOLS = -1;
+    // Width of the central gap in split mode (in key-widths). Shared by the letter rows and the
+    // (non-splitting) bottom row so the spacebar can absorb exactly this much when split.
+    private static final float SPLIT_CENTER_GAP = 1.5f;
 
     public Definitions(Context current) {
         this.context = current;
@@ -263,7 +266,7 @@ public class Definitions {
     // not split, small end gaps inset the home row. The bottom row (addGboardBottomRow) is added
     // separately and never splits.
     public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard, boolean split) {
-        float centerGap = 1.5f; // width of the central split gap, in key-widths (tweakable)
+        float centerGap = SPLIT_CENTER_GAP; // width of the central split gap, in key-widths
 
         // Row 1: q w e r t | y u i o p
         keyboard.newRow()
@@ -310,19 +313,24 @@ public class Definitions {
 
     // Bottom row for the Gboard QWERTY: Ctrl, comma, space, period, enter.
     // Period carries the punctuation popup; comma carries the IPA stress/length marks.
-    public void addGboardBottomRow(KeyboardLayoutBuilder keyboard) {
-        // Sizes sum to 10 (same as the 10-key letter rows), so Ctrl/comma/period come out the
-        // same width as the letters and Enter (1.5) ends up about as wide as Esc/Tab/SYM. The
-        // spacebar (5.5) takes the rest.
+    public void addGboardBottomRow(KeyboardLayoutBuilder keyboard, boolean split) {
+        // The row's shares sum to the SAME total as the letter rows (10 normally, 10 + the central
+        // gap when split), so Ctrl/comma/period come out exactly the letter-key width in BOTH modes
+        // (the letters shrink when split, and comma/period shrink with them). Enter is exactly the
+        // Esc/Tab/SYM width: that row has 7 keys, so 1/7 of the width == rowTotal/7 shares here. The
+        // spacebar takes whatever is left, so in split mode the gap's worth of width goes to it.
+        float rowTotal = split ? (10f + SPLIT_CENTER_GAP) : 10f;
+        float enterSize = rowTotal / 7f;
+        float spaceSize = rowTotal - 3f - enterSize; // Ctrl + comma + period account for 3 shares
         keyboard.newRow()
                 .addKey("Ctrl", 17).asModifier().onCtrlShow("CTRL")
                 .addKey(',').withPopupNoCorner(3, "ː", "ː","ˈ","ˌ")
-                .addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32).withSize(5.5f)
+                .addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32).withSize(spaceSize)
                 .addKey('.').withPopupNoCorner(6, ",",
                         "·","_","&","%","\"","+",
                         "-",":","@","'","/",";",
                         "(",")","#","!",",","?")
-                .addEnterKey()
+                .addEnterKey().withSize(enterSize)
         ;
     }
 

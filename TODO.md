@@ -48,9 +48,11 @@ actually works (architecture, codebase map, build and install) is in the
       cursor now moves the caret with `InputConnection.setSelection` (stays inside the
       field, stops at the ends) instead of arrow-key events that jumped focus out;
       slightly faster (`CURSOR_STEP_DP` 11) with a per-character haptic tick. (3) Bottom
-      row rebalanced: comma/period are now the same width as the letters, the spacebar is
-      wider, and Enter is about Esc/Tab/SYM width. (4) Period popup reordered to the
-      agreed layout (2026-06-29)
+      row rebalanced so comma/period are exactly the letter-key width and Enter is exactly
+      the Esc/Tab/SYM width (1/7) in BOTH normal and split modes: the bottom row total
+      tracks the letter-row total, and in split mode the central gap's width goes to the
+      spacebar (so comma/period shrink with the letters and the spacebar is a bigger
+      target). (4) Period popup reordered to the agreed layout (2026-06-29)
 - [x] Long-press keyboard Stage 3: **split keyboard** + **spacebar cursor**. A new
       "Split keyboard (QWERTY)" setting (Off / Auto / On; Auto splits at >= 600dp) pushes
       the main QWERTY into two halves with a central gap and duplicates the inner G and V

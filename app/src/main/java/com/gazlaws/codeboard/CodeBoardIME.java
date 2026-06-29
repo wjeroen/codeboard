@@ -657,7 +657,7 @@ public class CodeBoardIME extends InputMethodService
                             || (splitMode.equals("auto")
                                 && getResources().getConfiguration().screenWidthDp >= 600);
                     Definitions.addGboardQwertyRows(builder, split);
-                    definitions.addGboardBottomRow(builder);
+                    definitions.addGboardBottomRow(builder, split);
                 } else {
                     switch (mLayout) {
                         case 1:
