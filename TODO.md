@@ -53,6 +53,21 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Split max-width, caps lock, popup polish** (2026-06-29):
+  - **Split halves capped:** each half of a split keyboard is now at most 5 key-heights wide
+    (`5/rows` of the keyboard height), so on a wide screen the keys stop stretching and the
+    central gap grows to keep each half near the thumb. Keys keep their relative sizes
+    (irregular ones like Ctrl/Enter are not forced square). The gap is computed per-build
+    (`CodeBoardIME.computeSplitGap`), floored at `MIN_SPLIT_GAP` on narrow screens.
+  - **Caps lock is clear now:** the Shift key shows an underlined arrow
+    (`ic_caps_lock_24dp`) while caps lock is on. Enable it by **double-tapping Shift**
+    (Gboard-style) or long-pressing it; a single tap clears it. The long-press floating cell
+    shows the arrow you are switching to.
+  - **No more popup slide:** the popup window is now always sized to the full alternates grid,
+    so the press preview and the long-press grid share one window. The preview just draws one
+    cell and the grid fills the rest, so it never repositions.
+  - **Float height** lowered to half a key height (was ~a full key height). **Shadow** deepened
+    (radius 30, 10px down). **Shift alternates** show capitalised while Shift is held.
 - [x] **Popup unification + split/feedback tweaks** (2026-06-29):
   - **Unified popups:** every key now uses the same floating cell as the letter preview
     (Ctrl, Backspace, Enter, F-keys, etc. no longer jump up in place). Each cell has a
@@ -186,19 +201,23 @@ section for how it works. The only open feature, **clipboard history (Feature E)
 still needs a design pass before it gets a plan here.
 
 Tunables worth revisiting after on-device testing (all in code, easy to change):
-- Split central gap width: `SPLIT_CENTER_GAP` in `Definitions` (2.0). Shared by the
-  letter rows and the bottom row so the spacebar absorbs exactly the gap when split.
+- Split central gap: computed per-build by `CodeBoardIME.computeSplitGap` so each half is
+  capped at 5 key-heights wide; floored at `MIN_SPLIT_GAP` (2.5) on narrow screens. The
+  "10" in that formula is the two halves of 5 keys. Signalled to the row methods as the
+  `splitGap` float (<= 0 means "not split").
 - Max keys for a row to still split: the `12` passed to `splitCurrentRow` (rows longer
   than that stay full-width).
 - Ctrl/Enter width on the bottom row: `ctrlEnterSize` in `addGboardBottomRow` (1.25).
 - Side padding: `sidePadding` in `CodeBoardIME.onCreateInputView` (split only: 0.03,
   normal mode 0 / edge-to-edge).
 - Corner symbol size: `cornerPaint` text size in `UiTheme` (0.52× the key font).
-- Floating popup lift: `POPUP_LIFT_PX` in `KeyboardButtonView` (100px above the key,
-  half the old in-place lift). Applies to the preview cell and the alternates grid.
+- Floating popup lift: `lift = cellH * 0.5f` in `KeyboardButtonView.showOrUpdatePopup`
+  (half a key height above the key). Applies to the preview cell and the alternates grid.
 - Popup drop shadow: `SHADOW_PAD` / `SHADOW_RADIUS` / `SHADOW_DY` / `SHADOW_COLOR` in
-  `PopupKeyboardView` (18 / 10 / 5 / ~40% black). Drawn on a software layer.
-- Popup pop-in is animation-free (`setAnimationStyle(0)` in `KeyboardButtonView`).
+  `PopupKeyboardView` (44 / 30 / 10 / ~40% black). Drawn on a software layer.
+- Caps-lock double-tap window: `SHIFT_DOUBLE_TAP_MS` in `CodeBoardIME` (300ms).
+- Popup pop-in is animation-free (`setAnimationStyle(0)` in `KeyboardButtonView`), and the
+  window is grid-sized from the preview on, so it never repositions on long-press.
 - Spacebar cursor sensitivity: `CURSOR_STEP_DP` in `KeyboardButtonView` (11dp/char).
 - Cursor haptic tick reuses the keypress vibration length (`vibrateLength`).
 - Auto-split screen threshold: 600dp in `CodeBoardIME.onCreateInputView`.

@@ -20,7 +20,9 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.ResultReceiver;
+import android.os.SystemClock;
 import android.os.Vibrator;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -78,6 +80,11 @@ public class CodeBoardIME extends InputMethodService
     private boolean longPressedSpaceButton = false;
     private int mSpaceCursorTarget = -1; // local caret target during a spacebar drag; -1 = not dragging
     private int mSpaceCursorMax = 0;     // cached text length (max caret position) for the current drag
+    // Minimum split centre-gap (key-widths) on screens too narrow to hit the max-half-width cap.
+    private static final float MIN_SPLIT_GAP = 2.5f;
+    // Two Shift taps within this window (ms) toggle caps lock, like Gboard.
+    private static final long SHIFT_DOUBLE_TAP_MS = 300;
+    private long mLastShiftTapMs = 0;
 
     @Override
     public void onKey(int primaryCode, int[] KeyCodes) {
@@ -149,22 +156,37 @@ public class CodeBoardIME extends InputMethodService
                 controlKeyUpdateView();
                 break;
 
-            case 16: //KEYCODE_SHIFT_LEFT
-                // emulates press of shift key - this helps for selection with arrow keys
-                if (!shiftLock && !shift) {
-                    //Simple shift to true
-                    shift = true;
-                    ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT));
-                } else if (!shiftLock && shift) {
-                    //Simple remove shift
+            case 16: { //KEYCODE_SHIFT_LEFT
+                // Tap = one-shot shift; two quick taps = caps lock (like Gboard); a tap while
+                // caps-locked clears it. Long-press also toggles caps lock (see onKeyLongPress).
+                long nowShift = SystemClock.uptimeMillis();
+                boolean shiftDoubleTap = (nowShift - mLastShiftTapMs) < SHIFT_DOUBLE_TAP_MS;
+                mLastShiftTapMs = nowShift;
+                if (shiftLock) {
+                    // Caps lock on: a tap turns it (and shift) off.
+                    shiftLock = false;
                     shift = false;
                     ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT));
+                } else if (shiftDoubleTap) {
+                    // Two quick taps engage caps lock.
+                    shiftLock = true;
+                    if (!shift) {
+                        shift = true;
+                        ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT));
+                    }
+                } else if (shift) {
+                    // Single tap while shifted: drop shift.
+                    shift = false;
+                    ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT));
+                } else {
+                    // Single tap: one-shot shift.
+                    shift = true;
+                    ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT));
                 }
-                //else if (shift && shiftLock) {
-                //Stay shifted if previously shifted
-                //}
                 shiftKeyUpdateView();
+                capsLockUpdateView();
                 break;
+            }
 
             default: {
                 int meta = 0;
@@ -422,6 +444,7 @@ public class CodeBoardIME extends InputMethodService
                 ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT));
             }
             shiftKeyUpdateView();
+            capsLockUpdateView();
         }
 
         if (keyCode == 17) {
@@ -621,6 +644,23 @@ public class CodeBoardIME extends InputMethodService
             float sidePadding = split ? 0.03f : 0f;
             builder.setBox(Box.create(sidePadding, 0, 1 - 2 * sidePadding, 1));
 
+            // In split mode each half is capped at 5 key-heights wide (so it stays near the thumb on
+            // very wide screens); the central gap absorbs the leftover width. computeSplitGap needs
+            // the row count to know the key height, so count the rows this page will build.
+            int numRows;
+            if (mKeyboardState == R.integer.keyboard_sym) {
+                numRows = 1; // action row
+                if (!mCustomSymbolsSym.isEmpty()) numRows++;
+                if (!mCustomSymbolsSym2.isEmpty()) numRows++;
+                if (!mCustomSymbolsSym3.isEmpty()) numRows++;
+                if (!mCustomSymbolsSym4.isEmpty()) numRows++;
+                numRows += mCustomSymbolsSym4.isEmpty() ? 3 : 1; // F-key rows or the custom space row
+            } else { // normal page (clipboard never splits, so its count does not matter)
+                numRows = 1 /*action*/ + 1 /*number*/ + 3 /*letters*/ + 1 /*bottom*/;
+                if (!mCustomSymbolsMain2.isEmpty()) numRows++;
+            }
+            float splitGap = split ? computeSplitGap(numRows, sidePadding, mSize, sizeLandscape) : 0f;
+
             if (mToprow) {
                 definitions.addCopyPasteRow(builder);
             } else {
@@ -629,16 +669,16 @@ public class CodeBoardIME extends InputMethodService
 
             if (mKeyboardState == R.integer.keyboard_sym) {
                 if (!mCustomSymbolsSym.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym, split);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym, splitGap);
                 }
                 if (!mCustomSymbolsSym2.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym2, split);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym2, splitGap);
                 }
                 if (!mCustomSymbolsSym3.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym3, split);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym3, splitGap);
                 }
                 if (!mCustomSymbolsSym4.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym4, split);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym4, splitGap);
                 }
                 // Keep the function-key rows (F1-F12, Home/End/Del, PgUp/PgDn) whenever
                 // the fourth row is unused. Adding only a third row now augments the
@@ -646,35 +686,35 @@ public class CodeBoardIME extends InputMethodService
                 // keyboard gets tall enough that swapping in a plain space row makes more
                 // sense, so the original behavior is preserved in that case.
                 if (mCustomSymbolsSym4.isEmpty()) {
-                    definitions.addSymbolRows(builder, split);
+                    definitions.addSymbolRows(builder, splitGap);
                 } else {
                     definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);
                 }
             } else if (mKeyboardState == R.integer.keyboard_normal) {
                 // Fixed number row (1-0 with fraction popups) for every layout; the old editable
                 // "Main keyboard [Top Row]" is gone.
-                Definitions.addGboardNumberRow(builder, split);
+                Definitions.addGboardNumberRow(builder, splitGap);
                 if (!mCustomSymbolsMain2.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsMain2, split);
+                    Definitions.addCustomRow(builder, mCustomSymbolsMain2, splitGap);
                 }
                 // Every layout is now Gboard-style (corner symbols + long-press popups).
                 if (mLayout == 0) {
-                    Definitions.addGboardQwertyRows(builder, split);
+                    Definitions.addGboardQwertyRows(builder, splitGap);
                 } else {
                     switch (mLayout) {
                         case 1:
-                            Definitions.addAzertyRows(builder, split);
+                            Definitions.addAzertyRows(builder, splitGap);
                             break;
                         case 2:
-                            Definitions.addDvorakRows(builder, split);
+                            Definitions.addDvorakRows(builder, splitGap);
                             break;
                         case 3:
-                            Definitions.addQwertzRows(builder, split);
+                            Definitions.addQwertzRows(builder, splitGap);
                             break;
                     }
                 }
                 // Shared bottom row for all layouts: Ctrl, comma, space, period, enter.
-                definitions.addGboardBottomRow(builder, split);
+                definitions.addGboardBottomRow(builder, splitGap);
             } else if (mKeyboardState == R.integer.keyboard_clipboard) {
                 definitions.addClipboardActions(builder);
 
@@ -703,6 +743,11 @@ public class CodeBoardIME extends InputMethodService
 
             Collection<Key> keyboardLayout = builder.build();
             mCurrentKeyboardLayoutView = mKeyboardUiFactory.createKeyboardView(this, keyboardLayout);
+            // A freshly built keyboard starts with the plain Shift arrow; re-apply caps lock so the
+            // underline shows if it was already on.
+            if (shiftLock) {
+                mCurrentKeyboardLayoutView.applyCapsLock(true);
+            }
             return mCurrentKeyboardLayoutView;
 
         } catch (KeyboardLayoutException e) {
@@ -730,6 +775,32 @@ public class CodeBoardIME extends InputMethodService
 
     public void shiftKeyUpdateView() {
         mCurrentKeyboardLayoutView.applyShiftModifier(shift);
+    }
+
+    public void capsLockUpdateView() {
+        if (mCurrentKeyboardLayoutView != null) {
+            mCurrentKeyboardLayoutView.applyCapsLock(shiftLock);
+        }
+    }
+
+    /**
+     * Central split-gap width (in key-widths) so that each half of a split keyboard is at most 5
+     * key-heights wide (one key height = keyboard height / rows). On a wide screen the gap grows to
+     * eat the leftover width, keeping the halves near the thumbs; on a narrow screen it falls back
+     * to {@link #MIN_SPLIT_GAP}. The "10" is the two halves of 5 keys each.
+     */
+    private float computeSplitGap(int numRows, float sidePadding, int portraitPct, int landscapePct) {
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        boolean landscape = dm.widthPixels > dm.heightPixels;
+        float fraction = (landscape ? landscapePct : portraitPct) / 100f;
+        float keyboardHeightPx = dm.heightPixels * fraction;
+        float keyHeightPx = keyboardHeightPx / Math.max(1, numRows);
+        if (keyHeightPx <= 0) {
+            return MIN_SPLIT_GAP;
+        }
+        float boxWidthPx = dm.widthPixels * (1f - 2f * sidePadding);
+        float gap = boxWidthPx / keyHeightPx - 10f;
+        return Math.max(MIN_SPLIT_GAP, gap);
     }
 
     private void clearLongPressTimer() {

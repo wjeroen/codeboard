@@ -15,6 +15,7 @@ import android.os.Looper;
 import android.widget.PopupWindow;
 
 import com.gazlaws.codeboard.CodeBoardIME;
+import com.gazlaws.codeboard.R;
 import com.gazlaws.codeboard.layout.Box;
 import com.gazlaws.codeboard.layout.Key;
 import com.gazlaws.codeboard.theme.UiTheme;
@@ -30,15 +31,13 @@ public class KeyboardButtonView extends View {
     // Finger travel (in dp) per one-character cursor step when dragging the spacebar (smaller =
     // faster). Tunable.
     private static final float CURSOR_STEP_DP = 11f;
-    // How far (px) the floating popup (preview cell and alternates grid) sits above the key top.
-    // Half of the old in-place key lift (200px). Tunable.
-    private static final float POPUP_LIFT_PX = 100f;
 
     private final Key key;
     private final KeyboardView.OnKeyboardActionListener inputService;
     private final UiTheme uiTheme;
     private Timer timer;
     private String currentLabel = null;
+    private Drawable currentIcon = null;   // the icon currently drawn (Shift swaps it for caps lock)
     private boolean isPressed = false;
     private boolean isPreviewActive = false;
     private boolean popupLongPressFired = false;
@@ -57,6 +56,7 @@ public class KeyboardButtonView extends View {
         this.key = key;
         this.uiTheme = uiTheme;
         this.currentLabel = key.info.label;
+        this.currentIcon = key.info.icon;
         //Enable shadow
         this.setOutlineProvider(ViewOutlineProvider.BOUNDS);
     }
@@ -139,8 +139,8 @@ public class KeyboardButtonView extends View {
                     uiTheme.cornerPaint);
         }
 
-        if (key.info.icon != null){
-            Drawable d = key.info.icon;
+        if (currentIcon != null){
+            Drawable d = currentIcon;
             d.setTint(uiTheme.foregroundPaint.getColor());
 
             int padding = (int)uiTheme.buttonBodyPadding*2;
@@ -304,32 +304,40 @@ public class KeyboardButtonView extends View {
         return popupWindow != null && popupWindow.isShowing();
     }
 
-    /** Instant press preview: one bright cell showing just the character pressed. */
+    /** Instant press preview: one bright cell (in the grid's footprint) showing the key's content. */
     private void showPreviewPopup(){
         popupIsGrid = false;
-        showOrUpdatePopup(1, 1, 0);
+        showOrUpdatePopup();
     }
 
-    /** Long-press: expand the preview into the full grid of alternates. */
+    /** Long-press: fill the same window with the full grid of alternates (no move/resize). */
     private void showPopup(){
-        if (key.info.popupChars == null || key.info.popupChars.length < 1){
+        if (!hasPopup()){
             return;
         }
         popupIsGrid = true;
-        int cols = Math.max(1, key.info.popupColumns);
-        int rowCount = (int) Math.ceil(key.info.popupChars.length / (float) cols);
-        int defaultCol = key.info.popupDefaultIndex % cols;
-        showOrUpdatePopup(cols, rowCount, defaultCol);
+        showOrUpdatePopup();
     }
 
     /**
-     * Show (or, if already up, resize-in-place) the popup above the key. The dimensions come from
-     * the args; whether it draws the single-cell press preview or the full alternates grid is
-     * decided by popupIsGrid (set by the caller before calling).
+     * Show the popup above the key, or refresh it in place. The window is ALWAYS sized to the full
+     * alternates grid (1x1 for keys with no alternates), so the long-press never moves or resizes
+     * it: the preview just draws one cell and the grid fills in the rest. popupIsGrid (set by the
+     * caller) picks which.
      */
-    private void showOrUpdatePopup(int columns, int rowCount, int defaultCol){
+    private void showOrUpdatePopup(){
         float cellW = getWidth();
         float cellH = getHeight();
+
+        // The popup window spans the full grid even during the preview, so it never has to reposition.
+        int columns, rowCount, defaultCol;
+        if (hasPopup()){
+            columns = Math.max(1, key.info.popupColumns);
+            rowCount = (int) Math.ceil(key.info.popupChars.length / (float) columns);
+            defaultCol = key.info.popupDefaultIndex % columns;
+        } else {
+            columns = 1; rowCount = 1; defaultCol = 0;
+        }
 
         int[] screenLoc = new int[2];
         getLocationOnScreen(screenLoc);
@@ -341,12 +349,12 @@ public class KeyboardButtonView extends View {
         int popupW = (int) (columns * cellW) + 2 * pad;
         int popupH = (int) (rowCount * cellH) + 2 * pad;
 
-        // Anchor so the selected/default cell sits directly above the key (column-aligned), with the
-        // cell block floating POPUP_LIFT_PX above the key top. The -pad backs out the shadow margin
-        // so the cells still land in the same place. Resting the finger keeps the default selected;
-        // sliding moves the highlight. These are screen-absolute coordinates.
+        // Anchor so the default column sits directly above the key, with the cell block floating half
+        // a key height above the key top. The -pad backs out the shadow margin so the cells still
+        // land in the same place. These are screen-absolute coordinates.
+        float lift = cellH * 0.5f; // half a key height
         int originX = (int) (screenLoc[0] - defaultCol * cellW) - pad;
-        int originY = (int) (screenLoc[1] - rowCount * cellH - POPUP_LIFT_PX) - pad;
+        int originY = (int) (screenLoc[1] - rowCount * cellH - lift) - pad;
 
         // Keep the popup fully on screen horizontally.
         int screenW = getResources().getDisplayMetrics().widthPixels;
@@ -359,7 +367,10 @@ public class KeyboardButtonView extends View {
         if (popupIsGrid){
             popupKeyboardView.configure(key.info, shiftActive, cellW, cellH, originX, originY);
         } else {
-            popupKeyboardView.configurePreview(currentLabel, key.info.icon, cellW, cellH, originX, originY);
+            // The preview cell sits in the bottom row, default column (directly above the key).
+            int previewSlot = (rowCount - 1) * columns + defaultCol;
+            popupKeyboardView.configurePreview(currentLabel, currentIcon, columns, rowCount, previewSlot,
+                    cellW, cellH, originX, originY);
         }
 
         if (popupWindow == null){
@@ -484,6 +495,25 @@ public class KeyboardButtonView extends View {
                     ? this.key.info.onCtrlLabel
                     : this.key.info.label;
             setCurrentLabel(nextLabel);
+        }
+    }
+
+    /** Only the Shift key reacts: it swaps to the underlined caps-lock arrow while locked. */
+    public void applyCapsLock(boolean locked) {
+        if (key.info.code != 16) {
+            return;
+        }
+        Drawable nextIcon = locked
+                ? getContext().getDrawable(R.drawable.ic_caps_lock_24dp)
+                : key.info.icon;
+        if (nextIcon != currentIcon) {
+            currentIcon = nextIcon;
+            invalidate();
+            // If the press preview is up (caps lock just toggled by a held long-press), refresh it
+            // so the floating cell shows the new symbol you switched to.
+            if (isPopupShowing() && !popupIsGrid) {
+                showPreviewPopup();
+            }
         }
     }
 

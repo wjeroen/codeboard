@@ -9,9 +9,10 @@ public class Definitions {
     private Context context;
     private static final int CODE_ESCAPE = -2;
     private static final int CODE_SYMBOLS = -1;
-    // Width of the central gap in split mode (in key-widths). Shared by the letter rows and the
-    // (non-splitting) bottom row so the spacebar can absorb exactly this much when split.
-    private static final float SPLIT_CENTER_GAP = 2.0f;
+    // Split mode is now signalled by the central-gap width (in key-widths) passed to each row
+    // method: splitGap <= 0 means "not split". The gap is computed per-build in CodeBoardIME so that
+    // each half of the keyboard is capped at 5 key-heights wide (the spacebar / gap absorbs the rest
+    // on very wide screens); see CodeBoardIME.computeSplitGap.
 
     public Definitions(Context current) {
         this.context = current;
@@ -46,25 +47,25 @@ public class Definitions {
     }
 
 
-    public static void addCustomRow(KeyboardLayoutBuilder keyboard, String symbols, boolean split) {
+    public static void addCustomRow(KeyboardLayoutBuilder keyboard, String symbols, float splitGap) {
         keyboard.newRow();
         char[] chars = symbols.toCharArray();
         for (char aChar : chars) keyboard.addKey(aChar);
         // Split rows of up to 12 keys down the middle; longer rows stay full-width.
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
     }
 
     // Fixed number row (1-0): no corner symbols (Gboard doesn't either), but each digit long-
     // presses to its superscript (the default) plus common fractions, mirroring Gboard. Splits
     // 1 2 3 4 5 | 6 7 8 9 0. Default is the first cell for 1-5 and the last cell for 6-0.
-    public static void addGboardNumberRow(KeyboardLayoutBuilder keyboard, boolean split) {
+    public static void addGboardNumberRow(KeyboardLayoutBuilder keyboard, float splitGap) {
         keyboard.newRow()
                 .addKey('1').withPopupNoCorner(5, "¹", "⅙","⅐","⅛","⅑","⅒", "¹","½","⅓","¼","⅕")
                 .addKey('2').withPopupNoCorner(3, "²", "²","⅖","⅔")
                 .addKey('3').withPopupNoCorner(4, "³", "³","⅗","¾","⅜")
                 .addKey('4').withPopupNoCorner(2, "⁴", "⁴","⅘")
                 .addKey('5').withPopupNoCorner(3, "⁵", "⁵","⅝","⅚");
-        if (split) keyboard.addGap(SPLIT_CENTER_GAP);
+        if (splitGap > 0) keyboard.addGap(splitGap);
         keyboard.addKey('6').withPopupNoCorner(1, "⁶", "⁶")
                 .addKey('7').withPopupNoCorner(2, "⁷", "⅞","⁷")
                 .addKey('8').withPopupNoCorner(1, "⁸", "⁸")
@@ -175,13 +176,13 @@ public class Definitions {
 
     // QWERTZ: structurally identical to the Gboard QWERTY (Z and Y swapped), same treatment
     // (corner symbols, popups, home-row gaps, G/V duplication on split).
-    public static void addQwertzRows(KeyboardLayoutBuilder keyboard, boolean split) {
-        float centerGap = SPLIT_CENTER_GAP;
+    public static void addQwertzRows(KeyboardLayoutBuilder keyboard, float splitGap) {
+        boolean split = splitGap > 0;
         float shiftSize = split ? 1.0f : 1.5f;
         keyboard.newRow();
         addLetterKey(keyboard, 'q'); addLetterKey(keyboard, 'w'); addLetterKey(keyboard, 'e');
         addLetterKey(keyboard, 'r'); addLetterKey(keyboard, 't');
-        if (split) keyboard.addGap(centerGap);
+        if (split) keyboard.addGap(splitGap);
         addLetterKey(keyboard, 'z'); addLetterKey(keyboard, 'u'); addLetterKey(keyboard, 'i');
         addLetterKey(keyboard, 'o'); addLetterKey(keyboard, 'p');
 
@@ -189,7 +190,7 @@ public class Definitions {
         if (!split) keyboard.addGap(0.5f);
         addLetterKey(keyboard, 'a'); addLetterKey(keyboard, 's'); addLetterKey(keyboard, 'd');
         addLetterKey(keyboard, 'f'); addLetterKey(keyboard, 'g');
-        if (split) { keyboard.addGap(centerGap); addLetterKey(keyboard, 'g'); }
+        if (split) { keyboard.addGap(splitGap); addLetterKey(keyboard, 'g'); }
         addLetterKey(keyboard, 'h'); addLetterKey(keyboard, 'j'); addLetterKey(keyboard, 'k');
         addLetterKey(keyboard, 'l');
         if (!split) keyboard.addGap(0.5f);
@@ -197,7 +198,7 @@ public class Definitions {
         keyboard.newRow().addShiftKey().withSize(shiftSize);
         addLetterKey(keyboard, 'y'); addLetterKey(keyboard, 'x'); addLetterKey(keyboard, 'c');
         addLetterKey(keyboard, 'v');
-        if (split) { keyboard.addGap(centerGap); addLetterKey(keyboard, 'v'); }
+        if (split) { keyboard.addGap(splitGap); addLetterKey(keyboard, 'v'); }
         addLetterKey(keyboard, 'b'); addLetterKey(keyboard, 'n'); addLetterKey(keyboard, 'm');
         keyboard.addBackspaceKey().withSize(shiftSize);
     }
@@ -205,38 +206,40 @@ public class Definitions {
     // AZERTY with the Gboard treatment (corner symbols + popups). Splits each row down the middle
     // (generic midpoint, no key duplication). The old !/?/Tab tail of the last row is dropped: !
     // and ? live on the period popup, Tab on the top action row.
-    public static void addAzertyRows(KeyboardLayoutBuilder keyboard, boolean split) {
+    public static void addAzertyRows(KeyboardLayoutBuilder keyboard, float splitGap) {
+        boolean split = splitGap > 0;
         float shiftSize = split ? 1.0f : 1.5f;
         keyboard.newRow();
         addLetterKey(keyboard, 'a'); addLetterKey(keyboard, 'z'); addLetterKey(keyboard, 'e');
         addLetterKey(keyboard, 'r'); addLetterKey(keyboard, 't'); addLetterKey(keyboard, 'y');
         addLetterKey(keyboard, 'u'); addLetterKey(keyboard, 'i'); addLetterKey(keyboard, 'o');
         addLetterKey(keyboard, 'p');
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (split) keyboard.splitCurrentRow(splitGap, 12);
 
         keyboard.newRow();
         addLetterKey(keyboard, 'q'); addLetterKey(keyboard, 's'); addLetterKey(keyboard, 'd');
         addLetterKey(keyboard, 'f'); addLetterKey(keyboard, 'g'); addLetterKey(keyboard, 'h');
         addLetterKey(keyboard, 'j'); addLetterKey(keyboard, 'k'); addLetterKey(keyboard, 'l');
         addLetterKey(keyboard, 'm');
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (split) keyboard.splitCurrentRow(splitGap, 12);
 
         keyboard.newRow().addShiftKey().withSize(shiftSize);
         addLetterKey(keyboard, 'w'); addLetterKey(keyboard, 'x'); addLetterKey(keyboard, 'c');
         addLetterKey(keyboard, 'v'); addLetterKey(keyboard, 'b'); addLetterKey(keyboard, 'n');
         keyboard.addBackspaceKey().withSize(shiftSize);
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (split) keyboard.splitCurrentRow(splitGap, 12);
     }
 
     // Dvorak with the Gboard treatment (corner symbols + popups), generic midpoint split. The
     // leading "!" stays a plain key; the row-1 Enter is dropped (the shared bottom row has Enter).
-    public static void addDvorakRows(KeyboardLayoutBuilder keyboard, boolean split) {
+    public static void addDvorakRows(KeyboardLayoutBuilder keyboard, float splitGap) {
+        boolean split = splitGap > 0;
         float shiftSize = split ? 1.0f : 1.5f;
         keyboard.newRow().addKey('!');
         addLetterKey(keyboard, 'p'); addLetterKey(keyboard, 'y'); addLetterKey(keyboard, 'f');
         addLetterKey(keyboard, 'g'); addLetterKey(keyboard, 'c'); addLetterKey(keyboard, 'r');
         addLetterKey(keyboard, 'l');
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (split) keyboard.splitCurrentRow(splitGap, 12);
 
         keyboard.newRow();
         addLetterKey(keyboard, 'a'); addLetterKey(keyboard, 'o'); addLetterKey(keyboard, 'e');
@@ -244,23 +247,23 @@ public class Definitions {
         addLetterKey(keyboard, 'h'); addLetterKey(keyboard, 't'); addLetterKey(keyboard, 'n');
         addLetterKey(keyboard, 's');
         keyboard.addBackspaceKey().withSize(shiftSize);
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (split) keyboard.splitCurrentRow(splitGap, 12);
 
         keyboard.newRow().addShiftKey().withSize(shiftSize);
         addLetterKey(keyboard, 'q'); addLetterKey(keyboard, 'j'); addLetterKey(keyboard, 'k');
         addLetterKey(keyboard, 'x'); addLetterKey(keyboard, 'b'); addLetterKey(keyboard, 'm');
         addLetterKey(keyboard, 'w'); addLetterKey(keyboard, 'v'); addLetterKey(keyboard, 'z');
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (split) keyboard.splitCurrentRow(splitGap, 12);
     }
 
-    public void addSymbolRows(KeyboardLayoutBuilder keyboard, boolean split) {
+    public void addSymbolRows(KeyboardLayoutBuilder keyboard, float splitGap) {
         keyboard.newRow()
                 .addKey("Home", -18)
                 .addKey("End", -19)
                 .addKey("Del", -21)
                 .addKey("PgUp", -22)
                 .addKey("PgDn", -23);
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
         keyboard.newRow()
                 .addShiftKey()
                 .addKey("F1", -6)
@@ -271,7 +274,7 @@ public class Definitions {
                 .addKey("F6", -11)
                 .addKey("F7", -12)
                 .addBackspaceKey();
-        if (split) keyboard.splitCurrentRow(SPLIT_CENTER_GAP, 12);
+        if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
         // The F8-F12 row carries the spacebar, so it is left whole (splitting around the bar
         // looks odd); this is the "best effort" SYM-page split noted in TODO.
         keyboard.newRow()
@@ -318,15 +321,16 @@ public class Definitions {
     // Popup chars are listed in on-screen order (top-left to bottom-right); the second
     // argument of withPopup is the default (typed on a hold-and-lift without sliding).
     public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard) {
-        addGboardQwertyRows(keyboard, false);
+        addGboardQwertyRows(keyboard, 0f);
     }
 
-    // When split is true, a central gap pushes each row into two halves (for thumb typing on
-    // wide screens) and the inner letters G and V are duplicated so both halves have one. When
-    // not split, small end gaps inset the home row. The bottom row (addGboardBottomRow) is added
-    // separately and never splits.
-    public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard, boolean split) {
-        float centerGap = SPLIT_CENTER_GAP; // width of the central split gap, in key-widths
+    // splitGap > 0 means split: a central gap of that width (in key-widths) pushes each row into two
+    // halves (for thumb typing on wide screens) and the inner letters G and V are duplicated so both
+    // halves have one. When not split, small end gaps inset the home row. The bottom row
+    // (addGboardBottomRow) is added separately and never splits.
+    public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard, float splitGap) {
+        boolean split = splitGap > 0;
+        float centerGap = splitGap; // width of the central split gap, in key-widths
         // Shift and Backspace are equal width and sized so the z..m letters stay letter-width,
         // matching the home row total (10 normal, 10 + the central gap when split). Up-arrow icon
         // on Shift (addShiftKey).
@@ -377,13 +381,13 @@ public class Definitions {
 
     // Bottom row for the Gboard QWERTY: Ctrl, comma, space, period, enter.
     // Period carries the punctuation popup; comma carries the IPA stress/length marks.
-    public void addGboardBottomRow(KeyboardLayoutBuilder keyboard, boolean split) {
+    public void addGboardBottomRow(KeyboardLayoutBuilder keyboard, float splitGap) {
         // Symmetric bottom row: Ctrl and Enter are equal width (1.25), comma and period are letter
         // width (1.0), the spacebar takes the rest. The total matches the letter rows (10 normal,
         // 10 + the central gap split), so comma/period stay letter-width in both modes. Comma's
         // corner/hold-default is the backtick (rehomed from the old number row), with the IPA marks
         // kept as slide alternates; period shows its comma hold-default as a corner symbol.
-        float rowTotal = split ? (10f + SPLIT_CENTER_GAP) : 10f;
+        float rowTotal = splitGap > 0 ? (10f + splitGap) : 10f;
         float ctrlEnterSize = 1.25f;
         float spaceSize = rowTotal - 2f * ctrlEnterSize - 2f; // Ctrl+Enter (2.5) + comma+period (2)
         keyboard.newRow()

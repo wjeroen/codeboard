@@ -16,17 +16,21 @@ import com.gazlaws.codeboard.theme.UiTheme;
  * coordinates here (updateSelection) so this view can highlight the cell under the
  * finger. On release the key view reads getSelectedChar().
  *
+ * The window is ALWAYS sized to the full alternates grid, even for the press preview (which just
+ * draws one cell in the slot that sits above the key). That way the long-press does not move or
+ * resize the window, it only fills in the rest of the cells, so the popup never slides into place.
+ *
  * The cells are drawn inset by {@link #SHADOW_PAD} on every side: that transparent margin gives the
  * blurred drop shadow somewhere to render without being clipped at the popup edge. KeyboardButtonView
- * sizes and anchors the popup window with the same SHADOW_PAD so the cells still land above the key.
+ * sizes and anchors the popup window with the same SHADOW_PAD.
  */
 public class PopupKeyboardView extends View {
 
     // Transparent margin (px) around the cell block so the drop shadow isn't clipped by the popup
     // window's edge. Shared with KeyboardButtonView (it sizes/anchors the window).
-    public static final int SHADOW_PAD = 18;
-    private static final float SHADOW_RADIUS = 10f;
-    private static final float SHADOW_DY = 5f;
+    public static final int SHADOW_PAD = 44;
+    private static final float SHADOW_RADIUS = 30f;
+    private static final float SHADOW_DY = 10f;
     private static final int SHADOW_COLOR = 0x66000000; // ~40% black
 
     private final UiTheme uiTheme;
@@ -41,7 +45,9 @@ public class PopupKeyboardView extends View {
     private int originX = 0; // popup top-left in absolute (screen) coordinates
     private int originY = 0;
     private boolean isPreview = false;       // true = single-cell press preview; false = alternates grid
-    private Drawable previewIcon = null;     // icon to show in the preview (backspace/enter/arrows)
+    private String previewChar = "";         // text to show in the preview cell
+    private Drawable previewIcon = null;      // icon to show in the preview cell (backspace/enter/arrows)
+    private int previewSlot = 0;              // grid index the preview cell occupies (the one above the key)
     private boolean displayUppercase = false; // draw the grid characters uppercased (shift held)
 
     public PopupKeyboardView(Context context, UiTheme uiTheme) {
@@ -63,24 +69,31 @@ public class PopupKeyboardView extends View {
         this.isPreview = false;
         this.previewIcon = null;
         this.displayUppercase = uppercase;
-        setCells(info.popupChars, info.popupColumns, info.popupDefaultIndex,
-                cellW, cellH, originX, originY);
+        this.chars = info.popupChars;
+        this.columns = Math.max(1, info.popupColumns);
+        this.rows = (int) Math.ceil(this.chars.length / (float) this.columns);
+        this.selectedIndex = info.popupDefaultIndex;
+        this.cellW = cellW;
+        this.cellH = cellH;
+        this.originX = originX;
+        this.originY = originY;
+        invalidate();
     }
 
-    /** Configure as the single-cell instant press preview of one character or icon. */
-    public void configurePreview(String character, Drawable icon, float cellW, float cellH, int originX, int originY) {
+    /**
+     * Configure as the single-cell press preview. The window still spans the whole grid
+     * ({@code columns} x {@code rows}); only the {@code previewSlot} cell is drawn, holding the
+     * pressed character or icon.
+     */
+    public void configurePreview(String character, Drawable icon, int columns, int rows, int previewSlot,
+                                 float cellW, float cellH, int originX, int originY) {
         this.isPreview = true;
+        this.chars = null;
+        this.previewChar = character == null ? "" : character;
         this.previewIcon = icon;
-        this.displayUppercase = false;
-        setCells(new String[]{ character == null ? "" : character }, 1, 0, cellW, cellH, originX, originY);
-    }
-
-    private void setCells(String[] chars, int columns, int selectedIndex,
-                          float cellW, float cellH, int originX, int originY) {
-        this.chars = chars;
         this.columns = Math.max(1, columns);
-        this.rows = (int) Math.ceil(chars.length / (float) this.columns);
-        this.selectedIndex = selectedIndex;
+        this.rows = Math.max(1, rows);
+        this.previewSlot = previewSlot;
         this.cellW = cellW;
         this.cellH = cellH;
         this.originX = originX;
@@ -124,33 +137,39 @@ public class PopupKeyboardView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        if (isPreview) {
+            drawCell(canvas, previewSlot, cellPreviewPaint, previewChar, previewIcon);
+            return;
+        }
         if (chars == null) return;
-        float pad = uiTheme.buttonBodyPadding;
-        float rx = uiTheme.buttonBodyBorderRadius;
         for (int i = 0; i < chars.length; i++) {
-            int col = i % columns;
-            int row = i / columns;
-            float left = SHADOW_PAD + col * cellW;
-            float top = SHADOW_PAD + row * cellH;
-            // Grid: only the cell under the finger (selected) is the brighter highlight. Preview:
-            // the single cell keeps the dimmer previewBodyPaint (less bright than the selection).
-            Paint cellPaint = (!isPreview && i == selectedIndex) ? cellSelectedPaint : cellPreviewPaint;
-            canvas.drawRoundRect(left + pad, top + pad, left + cellW - pad, top + cellH - pad,
-                    rx, rx, cellPaint);
-            if (isPreview && previewIcon != null) {
-                drawPreviewIcon(canvas, left, top);
-            } else {
-                String text = displayUppercase ? chars[i].toUpperCase() : chars[i];
-                float cx = left + cellW / 2f;
-                float cy = top + cellH / 2f + uiTheme.fontHeight / 3f;
-                canvas.drawText(text, cx, cy, uiTheme.foregroundPaint);
-            }
+            Paint cellPaint = (i == selectedIndex) ? cellSelectedPaint : cellPreviewPaint;
+            String text = displayUppercase ? chars[i].toUpperCase() : chars[i];
+            drawCell(canvas, i, cellPaint, text, null);
         }
     }
 
-    /** Draw the preview icon centred in its cell, mirroring KeyboardButtonView's icon sizing. */
-    private void drawPreviewIcon(Canvas canvas, float cellLeft, float cellTop) {
-        Drawable d = previewIcon;
+    /** Draw one cell at grid index {@code slot}: its rounded body, then its icon or text. */
+    private void drawCell(Canvas canvas, int slot, Paint cellPaint, String text, Drawable icon) {
+        float pad = uiTheme.buttonBodyPadding;
+        float rx = uiTheme.buttonBodyBorderRadius;
+        int col = slot % columns;
+        int row = slot / columns;
+        float left = SHADOW_PAD + col * cellW;
+        float top = SHADOW_PAD + row * cellH;
+        canvas.drawRoundRect(left + pad, top + pad, left + cellW - pad, top + cellH - pad,
+                rx, rx, cellPaint);
+        if (icon != null) {
+            drawIcon(canvas, icon, left, top);
+        } else if (text != null) {
+            float cx = left + cellW / 2f;
+            float cy = top + cellH / 2f + uiTheme.fontHeight / 3f;
+            canvas.drawText(text, cx, cy, uiTheme.foregroundPaint);
+        }
+    }
+
+    /** Centre an icon in a cell, mirroring KeyboardButtonView's icon sizing. */
+    private void drawIcon(Canvas canvas, Drawable d, float cellLeft, float cellTop) {
         d.setTint(uiTheme.foregroundPaint.getColor());
         int padding = (int) (uiTheme.buttonBodyPadding * 2);
         int iTop, iLeft, squareSize;

@@ -55,9 +55,11 @@ deciding whether to switch, this is what to expect:
 - **Spacebar cursor:** drag the spacebar left/right to move the caret (haptic tick per
   character).
 - **Split keyboard** for wide screens (tablets/foldables), Off/Auto/On in settings;
-  splits the letters, number row, and symbol rows.
-- **Up-arrow Shift key** (matches the backspace width) and a symmetric bottom row
-  (equal-width Ctrl and Enter, letter-width comma/period).
+  splits the letters, number row, and symbol rows, and caps each half's width so the
+  keys stay near your thumbs instead of stretching on very wide screens.
+- **Up-arrow Shift key** (matches the backspace width) with a clear **caps-lock**
+  indicator (underlined arrow; double-tap or long-press to lock), and a symmetric
+  bottom row (equal-width Ctrl and Enter, letter-width comma/period).
 - Plus fixes: symbol-row defaults, a third symbol row, the settings banner overlap.
 - **Planned:** an advanced clipboard history (see [`TODO.md`](./TODO.md)).
 
@@ -191,15 +193,19 @@ committed, always keep that in secrets.
 - **Ctrl+SYM:** opens the clipboard-pins page (your 7 saved snippets).
 - **Top action row:** Esc, Tab, arrows / editing keys, and SYM. The arrow and
   editing rows are defined in `Definitions.java`.
-- **Shift / Ctrl:** tap to use once. **Long-press Shift or Ctrl to lock** it on. Shift
-  is an up-arrow icon (Gboard-style) and is the same width as backspace.
+- **Shift / Ctrl:** tap to use once. **Long-press Ctrl to lock** it on. Shift is an
+  up-arrow icon (Gboard-style), the same width as backspace.
+- **Caps lock:** **double-tap Shift** (or long-press it) to lock; the arrow gains an
+  underline while it is on. A single tap turns it back off.
 - **Drag the Spacebar** left/right to move the cursor character by character, with a
   haptic tick per character (a plain tap still types a space). This replaced the old
   space long-press IME picker.
 - **Split keyboard:** Settings has an Off / Auto / On switch. Auto splits the keyboard
   into two halves on wide screens (>= 600dp, tablets/foldables). The letter rows
   duplicate their inner key (e.g. G and V on QWERTY) so each thumb has one; the number,
-  symbol, and custom rows split down the middle.
+  symbol, and custom rows split down the middle. On very wide screens each half stops
+  growing once it reaches 5 key-heights wide and the central gap takes the extra space,
+  so the keys stay near your thumbs instead of stretching across the screen.
 - **Hold an arrow key** to auto-repeat it.
 
 ---
