@@ -7,6 +7,10 @@ import androidx.core.graphics.ColorUtils;
 
 public class UiTheme {
 
+    // Above this background luminance (0=black, 1=white) a theme counts as "bright", so the popup
+    // cells darken to stand out instead of lifting toward white (which is invisible on a light bg).
+    private static final double BRIGHT_THEME_LUMINANCE = 0.5;
+
     public Paint foregroundPaint;
     public int backgroundColor;
     public float fontHeight;
@@ -45,10 +49,13 @@ public class UiTheme {
         }
         // button body
         theme.buttonBodyPaint.setColor(info.backgroundColor);
-        // brighter "preview" body, reused for long-press popup cells
-        theme.previewBodyPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.3f));
-        // even brighter highlight for the currently-selected popup cell
-        theme.popupSelectedPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, Color.WHITE, 0.55f));
+        // Popup cell shading. Two levels (preview / press = subtler, selected option = stronger).
+        // Lift toward white on dark themes; on a bright theme darken toward black instead, so the
+        // cell still contrasts with the light keyboard.
+        int popupContrast = ColorUtils.calculateLuminance(info.backgroundColor) > BRIGHT_THEME_LUMINANCE
+                ? Color.BLACK : Color.WHITE;
+        theme.previewBodyPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, popupContrast, 0.3f));
+        theme.popupSelectedPaint.setColor(ColorUtils.blendARGB(info.backgroundColor, popupContrast, 0.55f));
         // foreground
         theme.foregroundPaint.setColor(info.foregroundColor);
         theme.fontHeight = info.fontSize;

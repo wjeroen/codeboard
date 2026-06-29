@@ -53,6 +53,13 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Bright-theme popups, shadow layering, wider split margin** (2026-06-29):
+  - Popup cells now **darken on bright themes** (luminance > 0.5) instead of lifting toward
+    white, which was invisible on a light keyboard. Both levels flip (press/preview and the
+    selected option).
+  - Popup **shadows are drawn behind every cell** (a first pass), so one option's shadow no
+    longer falls on the next option.
+  - Split **side padding 0.03 → 0.05** (does not change key width thanks to the max-width cap).
 - [x] **Split max-width, caps lock, popup polish** (2026-06-29):
   - **Split halves capped:** each half of a split keyboard is now at most 5 key-heights wide
     (`5/rows` of the keyboard height), so on a wide screen the keys stop stretching and the
@@ -208,13 +215,17 @@ Tunables worth revisiting after on-device testing (all in code, easy to change):
 - Max keys for a row to still split: the `12` passed to `splitCurrentRow` (rows longer
   than that stay full-width).
 - Ctrl/Enter width on the bottom row: `ctrlEnterSize` in `addGboardBottomRow` (1.25).
-- Side padding: `sidePadding` in `CodeBoardIME.onCreateInputView` (split only: 0.03,
-  normal mode 0 / edge-to-edge).
+- Side padding: `sidePadding` in `CodeBoardIME.onCreateInputView` (split only: 0.05,
+  normal mode 0 / edge-to-edge). With the max-width cap this trades gap for margin, not
+  key width.
+- Popup cell contrast flip: `BRIGHT_THEME_LUMINANCE` in `UiTheme` (0.5). Above it the
+  popup cells darken instead of lighten so they show on bright themes.
 - Corner symbol size: `cornerPaint` text size in `UiTheme` (0.52× the key font).
 - Floating popup lift: `lift = cellH * 0.5f` in `KeyboardButtonView.showOrUpdatePopup`
   (half a key height above the key). Applies to the preview cell and the alternates grid.
 - Popup drop shadow: `SHADOW_PAD` / `SHADOW_RADIUS` / `SHADOW_DY` / `SHADOW_COLOR` in
-  `PopupKeyboardView` (44 / 30 / 10 / ~40% black). Drawn on a software layer.
+  `PopupKeyboardView` (44 / 30 / 10 / ~40% black). Drawn on a software layer, in a first
+  pass behind all cells so a cell's shadow never lands on another cell.
 - Caps-lock double-tap window: `SHIFT_DOUBLE_TAP_MS` in `CodeBoardIME` (300ms).
 - Popup pop-in is animation-free (`setAnimationStyle(0)` in `KeyboardButtonView`), and the
   window is grid-sized from the preview on, so it never repositions on long-press.

@@ -640,8 +640,9 @@ public class CodeBoardIME extends InputMethodService
                         && getResources().getConfiguration().screenWidthDp >= 600);
 
             // Left/right margins only in split mode (a Gboard-style thumb gap on wide screens);
-            // normal mode is edge-to-edge. Full height, nothing top/bottom. Tunable.
-            float sidePadding = split ? 0.03f : 0f;
+            // normal mode is edge-to-edge. With the max-half-width cap the keys stay at their max
+            // size, so this just trades gap width for margin. Full height, nothing top/bottom. Tunable.
+            float sidePadding = split ? 0.05f : 0f;
             builder.setBox(Box.create(sidePadding, 0, 1 - 2 * sidePadding, 1));
 
             // In split mode each half is capped at 5 key-heights wide (so it stays near the thumb on
