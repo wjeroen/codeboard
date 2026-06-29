@@ -50,12 +50,12 @@ deciding whether to switch, this is what to expect:
   QWERTZ): corner symbols on every letter, a bright press preview, and a hold-to-open
   grid of accents/symbols you slide to pick (see
   [Long-press reference](#long-press-reference)).
-- **Fixed number row** (`1`–`0`) with long-press fraction popups (e.g. hold `1` for
-  `½ … ⅒`), replacing the old editable top row.
 - **Spacebar cursor:** drag the spacebar left/right to move the caret (haptic tick per
   character).
-- **Split keyboard** for wide screens (tablets/foldables), Off/Auto/On in settings;
-  splits the letters, number row, and symbol rows, and caps each half's width so the
+- **Number keys long-press to fractions** (Gboard-style): any digit on the editable top
+  row holds for its superscript plus common fractions (e.g. `1` → `½ … ⅒`).
+- **Split keyboard** for wide screens (tablets/foldables), Off / Auto / On in settings
+  (Auto by default); splits the letters and symbol rows, and caps each half's width so the
   keys stay near your thumbs instead of stretching on very wide screens.
 - **Up-arrow Shift key** (matches the backspace width) with a clear **caps-lock**
   indicator (underlined arrow; double-tap or long-press to lock), and a symmetric
@@ -71,13 +71,11 @@ deciding whether to switch, this is what to expect:
 - **Arrow keys** (left / down / up / right), all auto-repeating on hold.
 - **Four base layouts:** QWERTY, AZERTY, Dvorak, QWERTZ, all Gboard-style (corner
   symbols + long-press accent/symbol popups).
-- **Fixed number row** (`1 2 3 4 5 6 7 8 9 0`) with long-press fraction popups, shared
-  by every layout.
 - **Seven themes** (System Default, Material Dark, Material Light, Pure Black,
   White, Blue, Purple) plus a fully custom foreground/background color option.
-- **Customisable symbol rows.** The SYM-page rows and the optional extra main rows are
-  plain text fields in settings, so you can type your own row of characters. (The number
-  row and the letter rows are fixed.)
+- **Customisable symbol rows.** The top row (default `` `1234567890-= ``), the SYM-page
+  rows, and the optional extra main rows are plain text fields in settings, so you can
+  type your own row of characters. (The letter rows are fixed.)
 - **Clipboard pins (Ctrl+SYM):** up to 7 saved snippets you can paste instantly.
 - **Backup and restore:** export every setting and custom symbol row to a JSON
   file, then import it on another device or after a reinstall.
@@ -200,8 +198,8 @@ committed, always keep that in secrets.
 - **Drag the Spacebar** left/right to move the cursor character by character, with a
   haptic tick per character (a plain tap still types a space). This replaced the old
   space long-press IME picker.
-- **Split keyboard:** Settings has an Off / Auto / On switch. Auto splits the keyboard
-  into two halves on wide screens (>= 600dp, tablets/foldables). The letter rows
+- **Split keyboard:** Settings has an Off / Auto / On switch (Auto by default). Auto splits
+  the keyboard into two halves on wide screens (>= 600dp, tablets/foldables). The letter rows
   duplicate their inner key (e.g. G and V on QWERTY) so each thumb has one; the number,
   symbol, and custom rows split down the middle. On very wide screens each half stops
   growing once it reaches 5 key-heights wide and the central gap takes the extra space,
@@ -232,8 +230,9 @@ gets typed.
 > their popup *arrangement* (which cell is the default, column count) is generic for now
 > and may be tuned per layout later. See [`TODO.md`](./TODO.md).
 
-**Number row** (fixed `1`–`0`, no corner symbol; hold for the superscript default plus
-fractions):
+**Number keys** (the top row is the editable "Main keyboard [Top Row]", default
+`` `1234567890-= ``; any digit, wherever it lands, holds for its superscript default plus
+fractions, no corner symbol):
 
 ```
 1 → ⅙ ⅐ ⅛ ⅑ ⅒  /  [¹] ½ ⅓ ¼ ⅕
@@ -290,8 +289,8 @@ period are letter width):
                         ( ) # ! [,] ?
 ```
 
-The backtick `` ` `` lives here now (it used to be on the old editable number row); the
-comma key's IPA stress/length marks are kept as slide alternates.
+The comma key also offers the backtick `` ` `` as its hold-default, with the IPA
+stress/length marks kept as slide alternates.
 
 ---
 
@@ -305,7 +304,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **View Keyboard** | Open the IME picker; a scratch text field to test typing. |
 | **Features** | Key-press sound, vibration (+ length in ms), font size, keyboard size (portrait and landscape), key-press preview, notification shortcut. |
 | **Colour** | Theme picker, custom theme toggle with background/foreground color pickers, key borders, dynamic navigation-bar coloring. |
-| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off/Auto/On)**, "top row actions" toggle, and editable text for the customisable symbol rows (main second/bottom, SYM top/second/third/fourth). The number row and the letter rows are fixed. |
+| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off / Auto / On, Auto default)**, "top row actions" toggle, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth). The letter rows are fixed. |
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
@@ -393,7 +392,7 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `CodeBoardIME.java` | The IME service. Assembles the keyboard, owns the long-press `Timer`, `onPress` / `onKey` / `onText` / `onKeyLongPress`, and dispatches characters and key events to the active text field. |
 | `layout/Box.java` | Normalized (0.0 to 1.0) rectangle used to position a key. |
 | `layout/Key.java` | Runtime model of a placed key (its `Box` + its `KeyInfo`). |
-| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the fixed number row (`addGboardNumberRow`), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows. Per-letter long-press is split into shared accent **data** (`letterSymbol` / `letterAccents`) and per-layout **arrangement** (`addLetterKey`, the seam for future per-layout tuning; QWERTY keeps a hand-tuned arrangement inline). `splitCurrentRow` adds the central split gap to rows that have no manual split. |
+| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows (incl. the editable top row; `addCustomRow` attaches digit fraction popups via `addDigitFractionPopup`). Per-letter long-press is split into shared accent **data** (`letterSymbol` / `letterAccents`) and per-layout **arrangement** (`addLetterKey`, the seam for future per-layout tuning; QWERTY keeps a hand-tuned arrangement inline). `splitCurrentRow` adds the central split gap to rows that have no manual split. |
 | `layout/builder/KeyboardLayoutBuilder.java` | Fluent builder that assembles rows/keys and computes the normalized layout. |
 | `layout/builder/KeyboardLayoutRowBuilder.java` | Distributes key widths within a single row. |
 | `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, the long-press fields `cornerLabel` / `popupChars` / `popupDefaultIndex` / `popupColumns`, and `isSpacer` for empty gap "keys"). |

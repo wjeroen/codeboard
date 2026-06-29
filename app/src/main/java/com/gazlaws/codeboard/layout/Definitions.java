@@ -50,27 +50,31 @@ public class Definitions {
     public static void addCustomRow(KeyboardLayoutBuilder keyboard, String symbols, float splitGap) {
         keyboard.newRow();
         char[] chars = symbols.toCharArray();
-        for (char aChar : chars) keyboard.addKey(aChar);
+        for (char aChar : chars) {
+            keyboard.addKey(aChar);
+            addDigitFractionPopup(keyboard, aChar); // digits get Gboard's superscript/fraction popup
+        }
         // Split rows of up to 12 keys down the middle; longer rows stay full-width.
         if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
     }
 
-    // Fixed number row (1-0): no corner symbols (Gboard doesn't either), but each digit long-
-    // presses to its superscript (the default) plus common fractions, mirroring Gboard. Splits
-    // 1 2 3 4 5 | 6 7 8 9 0. Default is the first cell for 1-5 and the last cell for 6-0.
-    public static void addGboardNumberRow(KeyboardLayoutBuilder keyboard, float splitGap) {
-        keyboard.newRow()
-                .addKey('1').withPopupNoCorner(5, "¹", "⅙","⅐","⅛","⅑","⅒", "¹","½","⅓","¼","⅕")
-                .addKey('2').withPopupNoCorner(3, "²", "²","⅖","⅔")
-                .addKey('3').withPopupNoCorner(4, "³", "³","⅗","¾","⅜")
-                .addKey('4').withPopupNoCorner(2, "⁴", "⁴","⅘")
-                .addKey('5').withPopupNoCorner(3, "⁵", "⁵","⅝","⅚");
-        if (splitGap > 0) keyboard.addGap(splitGap);
-        keyboard.addKey('6').withPopupNoCorner(1, "⁶", "⁶")
-                .addKey('7').withPopupNoCorner(2, "⁷", "⅞","⁷")
-                .addKey('8').withPopupNoCorner(1, "⁸", "⁸")
-                .addKey('9').withPopupNoCorner(1, "⁹", "⁹")
-                .addKey('0').withPopupNoCorner(3, "⁰", "ⁿ","∅","⁰");
+    // Attaches Gboard's superscript + fraction long-press popup to a digit key (no-op for any other
+    // character), so the fractions work on whatever editable row a digit lands in. No corner symbol
+    // (Gboard doesn't show one either). Default is the superscript: first cell for 1-5, last for 6-0.
+    private static void addDigitFractionPopup(KeyboardLayoutBuilder kb, char c) {
+        switch (c) {
+            case '1': kb.withPopupNoCorner(5, "¹", "⅙","⅐","⅛","⅑","⅒", "¹","½","⅓","¼","⅕"); break;
+            case '2': kb.withPopupNoCorner(3, "²", "²","⅖","⅔"); break;
+            case '3': kb.withPopupNoCorner(4, "³", "³","⅗","¾","⅜"); break;
+            case '4': kb.withPopupNoCorner(2, "⁴", "⁴","⅘"); break;
+            case '5': kb.withPopupNoCorner(3, "⁵", "⁵","⅝","⅚"); break;
+            case '6': kb.withPopupNoCorner(1, "⁶", "⁶"); break;
+            case '7': kb.withPopupNoCorner(2, "⁷", "⅞","⁷"); break;
+            case '8': kb.withPopupNoCorner(1, "⁸", "⁸"); break;
+            case '9': kb.withPopupNoCorner(1, "⁹", "⁹"); break;
+            case '0': kb.withPopupNoCorner(3, "⁰", "ⁿ","∅","⁰"); break;
+            default: break;
+        }
     }
 
     // --- Per-letter long-press, split into shared DATA and per-layout ARRANGEMENT ---------------

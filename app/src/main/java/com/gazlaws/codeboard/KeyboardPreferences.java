@@ -197,7 +197,7 @@ public class KeyboardPreferences {
         return Integer.parseInt(safeRead("layout", "0"));
     }
 
-    /** Split-keyboard mode for the Gboard QWERTY layout: "off", "auto", or "on". */
+    /** Split-keyboard mode: "off", "auto" (default, wide screens), or "on". */
     public String getSplitMode() {
         return safeRead("split_keyboard", "auto");
     }

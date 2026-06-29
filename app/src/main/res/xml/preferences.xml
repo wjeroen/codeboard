@@ -105,6 +105,12 @@
             android:key="top_row_actions"
             android:title="@string/top_row_actions" />
         <EditTextPreference
+            android:defaultValue="@string/input_symbols_main"
+            android:imeOptions="flagNoExtractUi"
+            android:key="input_symbols_main"
+            android:title="Main keyboard [Top Row]:"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
             android:defaultValue="@string/input_symbols_main_2"
             android:imeOptions="flagNoExtractUi"
             android:key="input_symbols_main_2"
