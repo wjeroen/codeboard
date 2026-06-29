@@ -55,9 +55,10 @@ public class Definitions {
         if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
     }
 
-    // Fixed number row (1-0): no corner symbols (Gboard doesn't either), but each digit long-
-    // presses to its superscript (the default) plus common fractions, mirroring Gboard. Splits
-    // 1 2 3 4 5 | 6 7 8 9 0. Default is the first cell for 1-5 and the last cell for 6-0.
+    // NOTE: currently UNUSED. The top row was reverted to the editable "Main keyboard [Top Row]"
+    // (see CodeBoardIME, addCustomRow with input_symbols_main). Kept because it works and is easy to
+    // wire back up: a fixed number row (1-0) where each digit long-presses to its superscript (the
+    // default) plus common fractions, mirroring Gboard. Splits 1 2 3 4 5 | 6 7 8 9 0.
     public static void addGboardNumberRow(KeyboardLayoutBuilder keyboard, float splitGap) {
         keyboard.newRow()
                 .addKey('1').withPopupNoCorner(5, "¹", "⅙","⅐","⅛","⅑","⅒", "¹","½","⅓","¼","⅕")

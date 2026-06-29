@@ -621,6 +621,7 @@ public class CodeBoardIME extends InputMethodService
         }
         //Key Layout
         boolean mToprow = sharedPreferences.getTopRowActions();
+        String mCustomSymbolsMain = sharedPreferences.getCustomSymbolsMain();
         String mCustomSymbolsMain2 = sharedPreferences.getCustomSymbolsMain2();
         String mCustomSymbolsSym = sharedPreferences.getCustomSymbolsSym();
         String mCustomSymbolsSym2 = sharedPreferences.getCustomSymbolsSym2();
@@ -657,7 +658,8 @@ public class CodeBoardIME extends InputMethodService
                 if (!mCustomSymbolsSym4.isEmpty()) numRows++;
                 numRows += mCustomSymbolsSym4.isEmpty() ? 3 : 1; // F-key rows or the custom space row
             } else { // normal page (clipboard never splits, so its count does not matter)
-                numRows = 1 /*action*/ + 1 /*number*/ + 3 /*letters*/ + 1 /*bottom*/;
+                numRows = 1 /*action*/ + 3 /*letters*/ + 1 /*bottom*/;
+                if (!mCustomSymbolsMain.isEmpty()) numRows++;  // customizable top row
                 if (!mCustomSymbolsMain2.isEmpty()) numRows++;
             }
             float splitGap = split ? computeSplitGap(numRows, sidePadding, mSize, sizeLandscape) : 0f;
@@ -692,9 +694,10 @@ public class CodeBoardIME extends InputMethodService
                     definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);
                 }
             } else if (mKeyboardState == R.integer.keyboard_normal) {
-                // Fixed number row (1-0 with fraction popups) for every layout; the old editable
-                // "Main keyboard [Top Row]" is gone.
-                Definitions.addGboardNumberRow(builder, splitGap);
+                // Customizable top row (the editable "Main keyboard [Top Row]", default `1234567890-=).
+                if (!mCustomSymbolsMain.isEmpty()) {
+                    Definitions.addCustomRow(builder, mCustomSymbolsMain, splitGap);
+                }
                 if (!mCustomSymbolsMain2.isEmpty()) {
                     Definitions.addCustomRow(builder, mCustomSymbolsMain2, splitGap);
                 }
