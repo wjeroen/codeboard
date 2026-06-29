@@ -59,7 +59,7 @@ public class UiTheme {
         // corner symbol: a bit larger now, slightly dimmed foreground, drawn top-right
         theme.cornerPaint.setColor(info.foregroundColor);
         theme.cornerPaint.setAlpha(170);
-        theme.cornerPaint.setTextSize(theme.fontHeight * 0.62f);
+        theme.cornerPaint.setTextSize(theme.fontHeight * 0.52f);
         theme.cornerPaint.setTextAlign(Paint.Align.RIGHT);
         theme.cornerPaint.setAntiAlias(true);
         theme.cornerPaint.setTypeface(Typeface.DEFAULT);

@@ -177,8 +177,19 @@ public class KeyboardLayoutBuilder {
     }
 
     public KeyboardLayoutBuilder addShiftKey(){
-        return addKey("Shft", 16).asModifier()
-            .onShiftShow("SHFT").withSize(1.5f);
+        // Up-arrow icon (Gboard-style) instead of "Shft" text, so it can match the backspace
+        // key's width for a symmetric bottom letter row.
+        return addKey(context.getDrawable(R.drawable.ic_keyboard_arrow_up_24dp), 16)
+            .asModifier().withSize(1.5f);
+    }
+
+    /** For split keyboards: insert a central gap at the midpoint of the current row's keys (no-op
+     *  outside 2..maxKeys keys). Used to split symbol/custom rows that have no manual split. */
+    public KeyboardLayoutBuilder splitCurrentRow(float gap, int maxKeys){
+        if (currentRow != null){
+            currentRow.insertMidpointGap(gap, maxKeys);
+        }
+        return this;
     }
 
     public KeyboardLayoutBuilder addBackspaceKey(){

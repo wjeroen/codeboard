@@ -44,6 +44,21 @@ public class KeyboardLayoutRowBuilder {
         return this;
     }
 
+    /** Inserts a central split gap at the midpoint of this row's keys. The left half gets the
+     *  extra key when the count is odd. No-op outside 2..maxKeys keys. */
+    public void insertMidpointGap(float gap, int maxKeys) {
+        int n = keys.size();
+        if (n < 2 || n > maxKeys) {
+            return;
+        }
+        KeyInfo spacer = new KeyInfo();
+        spacer.label = "";
+        spacer.code = 0;
+        spacer.size = gap;
+        spacer.isSpacer = true;
+        keys.add((n + 1) / 2, spacer);
+    }
+
     public KeyboardLayoutRowBuilder setBox(Box size){
         this.box = size;
         return this;

@@ -20,6 +20,16 @@ actually works (architecture, codebase map, build and install) is in the
 - [ ] Install the CI-built `codeboard-debug` APK on a real device and smoke-test
       the two never-run app changes (Backup export/import, third SYM row fix).
       The CI build is green; this is the on-device check.
+- [ ] **Test the non-QWERTY layouts on a device** (AZERTY, Dvorak, QWERTZ). They got
+      the Gboard treatment (corner symbols, accent popups, splitting) but only QWERTY
+      has been used in practice. Likely rough spots: which corner symbol sits on which
+      key, the default-cell position per key, and how each row splits. The shared accent
+      data is fine; only the per-layout *arrangement* (`addLetterKey`) may need tuning.
+- [ ] **Per-layout long-press arrangement** (follow-up to the above): right now every
+      non-QWERTY layout uses one generic arrangement (symbol first, then accents, ≤6
+      columns). The seam to customise per layout is `Definitions.addLetterKey`; the
+      shared accent data is in `letterSymbol`/`letterAccents`. Decide per layout where
+      the default cell should sit (Gboard puts it nearest the key's screen position).
 
 ### Features to Implement
 - [ ] **Feature E: clipboard history** (medium-large, not yet designed). Replace the
@@ -43,6 +53,30 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Gboard polish pass (one big commit)** (2026-06-29):
+  - **Fixed number row** for every layout: `1 2 3 4 5 6 7 8 9 0`, no longer editable
+    (the "Main keyboard [Top Row]" setting and its `` `-= `` keys are gone). Each digit
+    long-presses to its superscript (the default) plus Gboard's fractions, e.g. `1` →
+    `½ … ⅒`, `2` → `⅖ ⅔`. Splits `1 2 3 4 5 | 6 7 8 9 0`. (`addGboardNumberRow`)
+  - `` ` `` (backtick) rehomed onto the **comma** key as its corner symbol + hold-default,
+    keeping the IPA stress marks as slide alternates. The **period** key now shows `,` as
+    its corner symbol.
+  - **Symmetric bottom row**: Ctrl and Enter are equal width (1.25), comma/period stay
+    letter-width (1.0), spacebar takes the rest. Works in normal and split mode.
+  - **Shift key** is now an up-arrow icon (was "Shft" text) and matches the backspace
+    width; the whole bottom letter row matches the home row's key sizes.
+  - **Splitting** now also applies to custom rows and the SYM-page rows (generic
+    midpoint split: half the keys each side, the left side gets the odd key, dropped
+    above 12 keys). Best-effort: the F8-F12 spacebar row is left whole.
+  - **AZERTY / Dvorak / QWERTZ** got the same Gboard treatment as QWERTY (corner
+    symbols, long-press accent popups, split). Built on a future-proof seam: the shared
+    accent DATA lives in `letterSymbol`/`letterAccents`, the per-layout ARRANGEMENT
+    lives in `addLetterKey` (generic for now; QWERTY keeps a hand-tuned arrangement as
+    the reference). See "needs testing" below.
+  - **Defaults**: font size 25, portrait keyboard size 35, landscape size 40 (landscape
+    is genuinely independent now; the landscape field was defaulting to the portrait
+    integer). Corner symbols slightly smaller (0.52× font). Small left/right side
+    padding (0.015), nothing top/bottom.
 - [x] Stage 3 + preview refinements: (1) press preview keeps its original brightness
       (`previewBodyPaint`); only its shape/size changed, not the colour. (2) Spacebar
       cursor now moves the caret with `InputConnection.setSelection` (stays inside the
@@ -123,8 +157,11 @@ actually works (architecture, codebase map, build and install) is in the
 - [ ] Credit the original author / upstream in the in-app About screen.
 - [ ] Pick a permanent name and app ID for the fork (currently the placeholder
       "CodeBoard Fork" and `com.gazlaws.codeboard.fork`).
-- [ ] Per-layout accent maps (extends the long-press alternates) for AZERTY / QWERTZ users.
 - [ ] Optional vertical spacebar drag for line navigation (Stage 3 added horizontal only).
+- [ ] Code cleanup: `Definitions.addQwertyRows` (the old non-Gboard QWERTY) and the
+      single-arg `addGboardQwertyRows(keyboard)` overload are now dead (nothing calls
+      them). Left in place on purpose as a reference; delete once the new layouts are
+      confirmed good on-device.
 
 ---
 
@@ -137,10 +174,18 @@ section for how it works. The only open feature, **clipboard history (Feature E)
 still needs a design pass before it gets a plan here.
 
 Tunables worth revisiting after on-device testing (all in code, easy to change):
-- Split central gap width: `centerGap` in `Definitions.addGboardQwertyRows` (1.5).
+- Split central gap width: `SPLIT_CENTER_GAP` in `Definitions` (1.5). Shared by the
+  letter rows and the bottom row so the spacebar absorbs exactly the gap when split.
+- Max keys for a row to still split: the `12` passed to `splitCurrentRow` (rows longer
+  than that stay full-width).
+- Ctrl/Enter width on the bottom row: `ctrlEnterSize` in `addGboardBottomRow` (1.25).
+- Side padding (left/right only): `sidePadding` in `CodeBoardIME.onCreateInputView` (0.015).
+- Corner symbol size: `cornerPaint` text size in `UiTheme` (0.52× the key font).
 - Spacebar cursor sensitivity: `CURSOR_STEP_DP` in `KeyboardButtonView` (11dp/char).
 - Cursor haptic tick reuses the keypress vibration length (`vibrateLength`).
 - Auto-split screen threshold: 600dp in `CodeBoardIME.onCreateInputView`.
+- Per-layout long-press arrangement seam: `Definitions.addLetterKey` (shared accent
+  data in `letterSymbol`/`letterAccents`).
 
 ---
 

@@ -598,7 +598,6 @@ public class CodeBoardIME extends InputMethodService
         }
         //Key Layout
         boolean mToprow = sharedPreferences.getTopRowActions();
-        String mCustomSymbolsMain = sharedPreferences.getCustomSymbolsMain();
         String mCustomSymbolsMain2 = sharedPreferences.getCustomSymbolsMain2();
         String mCustomSymbolsSym = sharedPreferences.getCustomSymbolsSym();
         String mCustomSymbolsSym2 = sharedPreferences.getCustomSymbolsSym2();
@@ -611,7 +610,14 @@ public class CodeBoardIME extends InputMethodService
         Definitions definitions = new Definitions(this);
         try {
             KeyboardLayoutBuilder builder = new KeyboardLayoutBuilder(this);
-            builder.setBox(Box.create(0, 0, 1, 1));
+            // Small left/right margins (Gboard-style), full height, nothing top/bottom. Tunable.
+            float sidePadding = 0.015f;
+            builder.setBox(Box.create(sidePadding, 0, 1 - 2 * sidePadding, 1));
+
+            String splitMode = sharedPreferences.getSplitMode();
+            boolean split = splitMode.equals("on")
+                    || (splitMode.equals("auto")
+                        && getResources().getConfiguration().screenWidthDp >= 600);
 
             if (mToprow) {
                 definitions.addCopyPasteRow(builder);
@@ -621,16 +627,16 @@ public class CodeBoardIME extends InputMethodService
 
             if (mKeyboardState == R.integer.keyboard_sym) {
                 if (!mCustomSymbolsSym.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym, split);
                 }
                 if (!mCustomSymbolsSym2.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym2);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym2, split);
                 }
                 if (!mCustomSymbolsSym3.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym3);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym3, split);
                 }
                 if (!mCustomSymbolsSym4.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym4);
+                    Definitions.addCustomRow(builder, mCustomSymbolsSym4, split);
                 }
                 // Keep the function-key rows (F1-F12, Home/End/Del, PgUp/PgDn) whenever
                 // the fourth row is unused. Adding only a third row now augments the
@@ -638,40 +644,35 @@ public class CodeBoardIME extends InputMethodService
                 // keyboard gets tall enough that swapping in a plain space row makes more
                 // sense, so the original behavior is preserved in that case.
                 if (mCustomSymbolsSym4.isEmpty()) {
-                    definitions.addSymbolRows(builder);
+                    definitions.addSymbolRows(builder, split);
                 } else {
                     definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);
                 }
             } else if (mKeyboardState == R.integer.keyboard_normal) {
-                if (!mCustomSymbolsMain.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsMain);
-                }
+                // Fixed number row (1-0 with fraction popups) for every layout; the old editable
+                // "Main keyboard [Top Row]" is gone.
+                Definitions.addGboardNumberRow(builder, split);
                 if (!mCustomSymbolsMain2.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsMain2);
+                    Definitions.addCustomRow(builder, mCustomSymbolsMain2, split);
                 }
+                // Every layout is now Gboard-style (corner symbols + long-press popups).
                 if (mLayout == 0) {
-                    // Gboard-style QWERTY: corner symbols + long-press popups, and a
-                    // dedicated bottom row (Ctrl, comma, space, period, enter).
-                    String splitMode = sharedPreferences.getSplitMode();
-                    boolean split = splitMode.equals("on")
-                            || (splitMode.equals("auto")
-                                && getResources().getConfiguration().screenWidthDp >= 600);
                     Definitions.addGboardQwertyRows(builder, split);
-                    definitions.addGboardBottomRow(builder, split);
                 } else {
                     switch (mLayout) {
                         case 1:
-                            Definitions.addAzertyRows(builder);
+                            Definitions.addAzertyRows(builder, split);
                             break;
                         case 2:
-                            Definitions.addDvorakRows(builder);
+                            Definitions.addDvorakRows(builder, split);
                             break;
                         case 3:
-                            Definitions.addQwertzRows(builder);
+                            Definitions.addQwertzRows(builder, split);
                             break;
                     }
-                    definitions.addCustomSpaceRow(builder, mCustomSymbolsMainBottom);
                 }
+                // Shared bottom row for all layouts: Ctrl, comma, space, period, enter.
+                definitions.addGboardBottomRow(builder, split);
             } else if (mKeyboardState == R.integer.keyboard_clipboard) {
                 definitions.addClipboardActions(builder);
 
