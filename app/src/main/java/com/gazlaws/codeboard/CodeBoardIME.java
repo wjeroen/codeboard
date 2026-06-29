@@ -27,7 +27,6 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.view.inputmethod.InputMethodManager;
 import android.media.MediaPlayer; // for keypress sound
 
 import androidx.core.app.ActivityCompat;
@@ -433,21 +432,25 @@ public class CodeBoardIME extends InputMethodService
             controlKeyUpdateView();
         }
 
-        if (keyCode == 32) {
-
-            longPressedSpaceButton = true;
-
-            InputMethodManager imm = (InputMethodManager)
-                    getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null)
-                imm.showInputMethodPicker();
-        }
+        // Space long-press no longer opens the IME picker: the spacebar is now a cursor
+        // control. Dragging it horizontally moves the caret (see onSpaceCursorMove); a plain
+        // hold-then-release still types a space.
 
         if (vibratorOn) {
             Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             if (vibrator != null)
                 vibrator.vibrate(vibrateLength);
         }
+    }
+
+    /**
+     * Called by the space key view while the finger is dragged horizontally across the
+     * spacebar. Each call nudges the caret one character left or right (reusing the arrow-key
+     * path) and marks the space as "used as a cursor" so onRelease will not also type a space.
+     */
+    public void onSpaceCursorMove(boolean right) {
+        longPressedSpaceButton = true;
+        onKey(right ? 5003 : 5000, null);
     }
 
     public void onText(CharSequence text) {
@@ -589,7 +592,11 @@ public class CodeBoardIME extends InputMethodService
                 if (mLayout == 0) {
                     // Gboard-style QWERTY: corner symbols + long-press popups, and a
                     // dedicated bottom row (Ctrl, comma, space, period, enter).
-                    Definitions.addGboardQwertyRows(builder);
+                    String splitMode = sharedPreferences.getSplitMode();
+                    boolean split = splitMode.equals("on")
+                            || (splitMode.equals("auto")
+                                && getResources().getConfiguration().screenWidthDp >= 600);
+                    Definitions.addGboardQwertyRows(builder, split);
                     definitions.addGboardBottomRow(builder);
                 } else {
                     switch (mLayout) {

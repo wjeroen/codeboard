@@ -22,9 +22,6 @@ actually works (architecture, codebase map, build and install) is in the
       The CI build is green; this is the on-device check.
 
 ### Features to Implement
-- [ ] **Long-press keyboard, Stage 3: split + spacebar cursor.** Auto-split on wide
-      screens (>= 600dp, duplicating G and V), and drag the spacebar horizontally to
-      move the cursor (no vertical).
 - [ ] **Feature E: clipboard history** (medium-large, not yet designed). Replace the
       current fixed setup (7 manually-set pins plus the single current clipboard) with a
       real, growing history of recently copied items you can scroll and paste from on the
@@ -46,6 +43,12 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Long-press keyboard Stage 3: **split keyboard** + **spacebar cursor**. A new
+      "Split keyboard (QWERTY)" setting (Off / Auto / On; Auto splits at >= 600dp) pushes
+      the main QWERTY into two halves with a central gap and duplicates the inner G and V
+      (`addGboardQwertyRows(builder, split)`). Dragging the spacebar horizontally now
+      moves the caret (`handleSpaceCursorDrag` -> `onSpaceCursorMove`, reusing the arrow
+      keys); space long-press no longer opens the IME picker (2026-06-28)
 - [x] Long-press polish: pressing a key now instantly shows a bright single popup cell
       with just that character (same square shape as a grid cell); holding for 300ms
       (Gboard's default long-press delay) expands it into the alternates grid. Single-
@@ -112,59 +115,22 @@ actually works (architecture, codebase map, build and install) is in the
 - [ ] Pick a permanent name and app ID for the fork (currently the placeholder
       "CodeBoard Fork" and `com.gazlaws.codeboard.fork`).
 - [ ] Per-layout accent maps (extends the long-press alternates) for AZERTY / QWERTZ users.
-- [ ] Optional vertical drag for line navigation in Stage 3a (spacebar cursor).
+- [ ] Optional vertical spacebar drag for line navigation (Stage 3 added horizontal only).
 
 ---
 
 ## Feature Plans
 
-The only remaining planned work is **Stage 3** of the long-press keyboard, which has
-two independent parts, planned below: **Spacebar cursor** (was "Feature A") and
-**Split keyboard** (was "Feature D"). Paths are under
-`app/src/main/java/com/gazlaws/codeboard/`; see the README codebase map for where
-each file lives.
+No detailed plans are pending. The long-press keyboard work (Stages 1-3: corner
+symbols, alternates grid, press preview, split keyboard, spacebar cursor) is all
+done, see Completed Recently and the README "Long-press reference" / architecture
+section for how it works. The only open feature, **clipboard history (Feature E)**,
+still needs a design pass before it gets a plan here.
 
-> Feature B (brighter preview) and Feature C (long-press alternates, Stages 1-2) are
-> done, see Completed Recently and the README "Long-press reference". Their old plans
-> were removed from here to keep this list current.
-
-### Stage 3a: Space-bar cursor navigation, Gboard-style (moderate)
-
-**Goal:** long-press Space, then drag horizontally to move the cursor character by
-character (optionally vertical drag for line up/down).
-
-**Plan:**
-1. Add `ACTION_MOVE` handling to `KeyboardButtonView.onTouchEvent`. Once a
-   long-press has fired, accumulate horizontal delta; every ~1 key-width, emit a
-   left/right cursor move and reset the accumulator.
-2. **Axis-lock** on the first meaningful movement (horizontal or vertical) to
-   avoid diagonal jumping.
-3. Dispatch movement with `InputConnection.sendKeyEvent(KEYCODE_DPAD_LEFT/RIGHT)`
-   (and `UP/DOWN`). The app already sends key events this way.
-4. Reuse the existing `longPressedSpaceButton` flag to suppress the space character
-   on release.
-5. Decide what happens to the current space-long-press IME picker: keep it only
-   when no drag occurred, or move it to another gesture.
-
-**Touches:** `layout/ui/KeyboardButtonView.java`, `CodeBoardIME.java`.
-
-### Stage 3b: Split keyboard for tablets / foldables (medium, low urgency)
-
-**Goal:** a centered gap that pushes the left half left and the right half right,
-for thumb typing on wide screens. Per the agreed spec, the inner letters G and V are
-duplicated so each half has its own, and the bottom row (Ctrl, comma, space, period,
-enter) does **not** split.
-
-**Plan:** because keys use normalized `Box` coordinates, implement the split as a
-post-processing geometry transform in `KeyboardLayoutBuilder.build()`: compress
-left-half keys into `[0, 0.5 - gap]` and right-half keys into `[0.5 + gap, 1.0]`,
-leaving the bottom row full-width. The middle gap has no child views, so touches
-there are naturally ignored. No changes to touch, drawing, or input dispatch are
-needed. Gate it behind an Off/Auto/On preference, where Auto detects wide screens via
-`getResources().getConfiguration().screenWidthDp >= 600`.
-
-**Touches:** `layout/builder/KeyboardLayoutBuilder.java`, `CodeBoardIME.java`,
-`KeyboardPreferences.java`, `res/xml/preferences.xml`.
+Tunables worth revisiting after on-device testing (all in code, easy to change):
+- Split central gap width: `centerGap` in `Definitions.addGboardQwertyRows` (1.5).
+- Spacebar cursor sensitivity: `CURSOR_STEP_DP` in `KeyboardButtonView` (16dp/char).
+- Auto-split screen threshold: 600dp in `CodeBoardIME.onCreateInputView`.
 
 ---
 

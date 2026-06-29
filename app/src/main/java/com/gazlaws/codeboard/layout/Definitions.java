@@ -255,40 +255,57 @@ public class Definitions {
     // Popup chars are listed in on-screen order (top-left to bottom-right); the second
     // argument of withPopup is the default (typed on a hold-and-lift without sliding).
     public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard) {
+        addGboardQwertyRows(keyboard, false);
+    }
+
+    // When split is true, a central gap pushes each row into two halves (for thumb typing on
+    // wide screens) and the inner letters G and V are duplicated so both halves have one. When
+    // not split, small end gaps inset the home row. The bottom row (addGboardBottomRow) is added
+    // separately and never splits.
+    public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard, boolean split) {
+        float centerGap = 1.5f; // width of the central split gap, in key-widths (tweakable)
+
+        // Row 1: q w e r t | y u i o p
         keyboard.newRow()
                 .addKey('q').onShiftUppercase().withPopup(2, "%", "%", "ʔ")
                 .addKey('w').onShiftUppercase().withPopup(1, "\\", "\\")
                 .addKey('e').onShiftUppercase().withPopup(6, "|", "ę","ë","ē","ė","ə","ɛ̃", "è","|","é","ê","ɜ","ɛ")
                 .addKey('r').onShiftUppercase().withPopup(5, "=", "=","ʁ","ɹ","ɾ","ʀ")
-                .addKey('t').onShiftUppercase().withPopup(2, "[", "[", "θ")
-                .addKey('y').onShiftUppercase().withPopup(5, "]", "ʏ","ij","]","ÿ","ý")
+                .addKey('t').onShiftUppercase().withPopup(2, "[", "[", "θ");
+        if (split) keyboard.addGap(centerGap);
+        keyboard.addKey('y').onShiftUppercase().withPopup(5, "]", "ʏ","ij","]","ÿ","ý")
                 .addKey('u').onShiftUppercase().withPopup(4, "<", "ũ","ù","ū","ʊ", "û","<","ú","ü")
                 .addKey('i').onShiftUppercase().withPopup(5, ">", "ɪ","ij","į","ì","ĩ", "ī","ï","î",">","í")
                 .addKey('o').onShiftUppercase().withPopup(6, "{", "ɔ̃","œ̃","õ","ō","ø","ò", "ɔ","œ","ö","ô","ó","{")
-                .addKey('p').onShiftUppercase().withPopup(1, "}", "}")
-                .newRow()
-                .addGap(0.5f)
-                .addKey('a').onShiftUppercase().withPopup(6, "@", "æ","ã","å","ā","ɒ","ɑ", "@","à","á","â","ä","ɑ̃")
+                .addKey('p').onShiftUppercase().withPopup(1, "}", "}");
+
+        // Row 2: a s d f g | g h j k l   (G duplicated when split; small end gaps otherwise)
+        keyboard.newRow();
+        if (!split) keyboard.addGap(0.5f);
+        keyboard.addKey('a').onShiftUppercase().withPopup(6, "@", "æ","ã","å","ā","ɒ","ɑ", "@","à","á","â","ä","ɑ̃")
                 .addKey('s').onShiftUppercase().withPopup(3, "#", "#","ß","ʃ")
                 .addKey('d').onShiftUppercase().withPopup(6, "€", "€","$","£","¥","¢","ð")
                 .addKey('f').onShiftUppercase().withPopup(1, "-", "-")
-                .addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ")
-                .addKey('h').onShiftUppercase().withPopup(2, "-", "-","ɦ")
+                .addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ");
+        if (split) keyboard.addGap(centerGap).addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ");
+        keyboard.addKey('h').onShiftUppercase().withPopup(2, "-", "-","ɦ")
                 .addKey('j').onShiftUppercase().withPopup(2, "+", "+","j́")
                 .addKey('k').onShiftUppercase().withPopup(1, "(", "(")
-                .addKey('l').onShiftUppercase().withPopup(1, ")", ")")
-                .addGap(0.5f)
-                .newRow()
+                .addKey('l').onShiftUppercase().withPopup(1, ")", ")");
+        if (!split) keyboard.addGap(0.5f);
+
+        // Row 3: shift z x c v | v b n m backspace   (V duplicated when split)
+        keyboard.newRow()
                 .addShiftKey()
                 .addKey('z').onShiftUppercase().withPopup(2, "*", "*","ʒ")
                 .addKey('x').onShiftUppercase().withPopup(1, "\"", "\"")
                 .addKey('c').onShiftUppercase().withPopup(4, "'", "ć","'","ç","č")
-                .addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ")
-                .addKey('b').onShiftUppercase().withPopup(1, ";", ";")
+                .addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
+        if (split) keyboard.addGap(centerGap).addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
+        keyboard.addKey('b').onShiftUppercase().withPopup(1, ";", ";")
                 .addKey('n').onShiftUppercase().withPopup(5, "!", "ń","!","ñ","ŋ","ɲ")
                 .addKey('m').onShiftUppercase().withPopup(1, "?", "?")
-                .addBackspaceKey()
-        ;
+                .addBackspaceKey();
     }
 
     // Bottom row for the Gboard QWERTY: Ctrl, comma, space, period, enter.

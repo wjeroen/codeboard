@@ -46,10 +46,13 @@ deciding whether to switch, this is what to expect:
 - **Settings backup:** export and import all settings (custom rows, themes, pins)
   to a JSON file.
 - **One keyboard entry** in the system switcher (the redundant French one is gone).
-- **Brighter key-press preview**, plus fixes (symbol-row defaults, a third symbol
-  row, the settings banner overlap).
-- **Planned:** accent characters on long-press, space-bar cursor navigation, a
-  split layout, and an advanced clipboard history (see [`TODO.md`](./TODO.md)).
+- **Gboard-style long-press keyboard:** corner symbols on every letter, a bright
+  press preview, and a hold-to-open grid of accents/symbols you slide to pick (see
+  [Long-press reference](#long-press-reference)).
+- **Spacebar cursor:** drag the spacebar left/right to move the caret.
+- **Split keyboard** for wide screens (tablets/foldables), Off/Auto/On in settings.
+- Plus fixes: symbol-row defaults, a third symbol row, the settings banner overlap.
+- **Planned:** an advanced clipboard history (see [`TODO.md`](./TODO.md)).
 
 ## Features
 
@@ -178,7 +181,11 @@ committed, always keep that in secrets.
 - **Top action row:** Esc, Tab, arrows / editing keys, and SYM. The arrow and
   editing rows are defined in `Definitions.java`.
 - **Shift / Ctrl:** tap to use once. **Long-press Shift or Ctrl to lock** it on.
-- **Long-press Space:** opens the system keyboard picker (switch to another IME).
+- **Drag the Spacebar** left/right to move the cursor character by character (a plain
+  tap still types a space). This replaced the old space long-press IME picker.
+- **Split keyboard:** Settings has an Off / Auto / On switch for the main QWERTY. Auto
+  splits it into two halves on wide screens (>= 600dp, tablets/foldables), duplicating
+  the inner G and V so each thumb has one.
 - **Hold an arrow key** to auto-repeat it.
 
 ---
@@ -247,7 +254,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **View Keyboard** | Open the IME picker; a scratch text field to test typing. |
 | **Features** | Key-press sound, vibration (+ length in ms), font size, keyboard size (portrait and landscape), key-press preview, notification shortcut. |
 | **Colour** | Theme picker, custom theme toggle with background/foreground color pickers, key borders, dynamic navigation-bar coloring. |
-| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), "top row actions" toggle, and editable text for every symbol row (main top/second/bottom, SYM top/second/third/fourth). |
+| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off/Auto/On)** for the main QWERTY, "top row actions" toggle, and editable text for every symbol row (main top/second/bottom, SYM top/second/third/fourth). |
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
@@ -280,12 +287,14 @@ Understanding these few facts explains most of the code:
 
 1. **Each key is a `View`.** A key is a `KeyboardButtonView extends View`. Touch
    is handled in its `onTouchEvent` (`ACTION_DOWN` / `MOVE` / `UP` / `CANCEL`).
-   `ACTION_MOVE` currently drives the long-press alternates popup (sliding the
-   finger to pick a character); the spacebar cursor drag (Stage 3a) is not built yet.
+   `ACTION_MOVE` drives the long-press alternates popup (sliding to pick a character)
+   and the spacebar cursor drag (`handleSpaceCursorDrag`).
 2. **Geometry is normalized.** Keys are positioned with `Box` coordinates that
    are fractions from 0.0 to 1.0 of the keyboard's width and height. They are
-   converted to pixels in `KeyboardButtonView.layout()`. Because geometry is
-   purely relative, layout transforms (like a future split keyboard) are easy.
+   converted to pixels in `KeyboardButtonView.layout()`. Because geometry is purely
+   relative, the split keyboard is just extra keys plus an `addGap` spacer in the
+   middle of each row (`Definitions.addGboardQwertyRows(builder, split)`); the gap is
+   a real "key" with no view (`isSpacer`, skipped by `KeyboardUiFactory`).
 3. **Press preview, then long-press alternates.** Both are the same `PopupKeyboardView`
    in a non-touchable `PopupWindow` above the key. (a) The instant *preview* (character
    keys, `hasCharPreview()`): on press, a single bright cell showing just the pressed
@@ -295,13 +304,13 @@ Understanding these few facts explains most of the code:
    default/selected cell sits above the key. Icon, modifier, and multi-char keys have
    no text popup, so they instead lift in place (`setTranslationY(-200)` + scale) in
    `animatePress()`.
-4. **Long-press has two paths.** For modifier and space keys,
-   `CodeBoardIME.onPress()` starts a `Timer` that fires `onKeyLongPress()` after
-   `ViewConfiguration.getLongPressTimeout()`; it handles shift-lock (code 16),
-   ctrl-lock (code 17), and space (code 32, the IME picker), with a
-   `longPressedSpaceButton` flag suppressing the space character. For keys that have
-   an alternates popup, `KeyboardButtonView` runs its **own** `Handler`-based
-   long-press that opens the popup instead.
+4. **Long-press has two paths.** For modifier keys, `CodeBoardIME.onPress()` starts a
+   `Timer` that fires `onKeyLongPress()` after `ViewConfiguration.getLongPressTimeout()`;
+   it handles shift-lock (code 16) and ctrl-lock (code 17). For keys that have an
+   alternates popup, `KeyboardButtonView` runs its **own** `Handler`-based long-press
+   that opens the popup. The **spacebar** no longer opens the IME picker on long-press;
+   instead, dragging it horizontally moves the caret (`onSpaceCursorMove`, which reuses
+   the arrow-key path and sets `longPressedSpaceButton` so no space is typed).
 
 ### How a key-press becomes text (high level)
 

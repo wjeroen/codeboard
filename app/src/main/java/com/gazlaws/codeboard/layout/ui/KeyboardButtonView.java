@@ -27,6 +27,8 @@ public class KeyboardButtonView extends View {
     private static final String TAG = "KeyboardButtonView";
     // Gboard's default "key long press delay" is 300ms; the alternates grid opens then.
     private static final int POPUP_DELAY_MS = 300;
+    // Finger travel (in dp) per one-character cursor step when dragging the spacebar.
+    private static final float CURSOR_STEP_DP = 16f;
 
     private final Key key;
     private final KeyboardView.OnKeyboardActionListener inputService;
@@ -41,6 +43,8 @@ public class KeyboardButtonView extends View {
     private PopupWindow popupWindow;
     private PopupKeyboardView popupKeyboardView;
     private boolean popupIsGrid = false; // false = single-cell press preview, true = alternates grid
+    private float spaceDragLastX = 0f;   // last finger X while dragging the spacebar (cursor mode)
+    private float spaceDragAccum = 0f;   // unspent horizontal travel toward the next cursor step
 
     public KeyboardButtonView(Context context, Key key, KeyboardView.OnKeyboardActionListener inputService, UiTheme uiTheme) {
         super(context);
@@ -58,11 +62,17 @@ public class KeyboardButtonView extends View {
         int action = e.getAction();
         switch(action){
             case MotionEvent.ACTION_DOWN:
+                if (isSpaceKey()){
+                    spaceDragLastX = e.getRawX();
+                    spaceDragAccum = 0f;
+                }
                 onPress();
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (isPopupShowing() && popupIsGrid){
                     popupKeyboardView.updateSelection(e.getRawX(), e.getRawY());
+                } else if (isSpaceKey()){
+                    handleSpaceCursorDrag(e.getRawX());
                 }
                 break;
             case MotionEvent.ACTION_UP:
@@ -234,6 +244,28 @@ public class KeyboardButtonView extends View {
                 && currentLabel.length() == 1;
     }
 
+    private boolean isSpaceKey(){
+        return key.info.code == 32;
+    }
+
+    /** Spacebar drag = cursor control: convert horizontal finger travel into left/right caret
+     *  moves. Every CURSOR_STEP_DP of travel nudges the caret one character. */
+    private void handleSpaceCursorDrag(float rawX){
+        spaceDragAccum += rawX - spaceDragLastX;
+        spaceDragLastX = rawX;
+        float stepPx = CURSOR_STEP_DP * getResources().getDisplayMetrics().density;
+        if (stepPx <= 0){
+            return;
+        }
+        while (Math.abs(spaceDragAccum) >= stepPx){
+            boolean right = spaceDragAccum > 0;
+            if (inputService instanceof CodeBoardIME){
+                ((CodeBoardIME) inputService).onSpaceCursorMove(right);
+            }
+            spaceDragAccum += right ? -stepPx : stepPx;
+        }
+    }
+
     private void scheduleLongPress(){
         cancelPopupLongPress();
         longPressRunnable = new Runnable() {
@@ -403,6 +435,13 @@ public class KeyboardButtonView extends View {
         if (hasCharPreview()){
             // Char keys: the bright preview popup cell (shown in onPress) is the feedback, so the
             // key itself stays put. Held, that cell expands into the alternates grid.
+            return;
+        }
+        if (isSpaceKey()){
+            // The spacebar is a cursor-drag control, so just brighten it (don't lift it, which
+            // would look odd while sliding horizontally).
+            isPreviewActive = true;
+            invalidate();
             return;
         }
         // Icon / modifier / multi-char keys have no text popup, so lift the key in place instead.

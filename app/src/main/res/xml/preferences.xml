@@ -93,6 +93,13 @@
             android:key="layout"
             android:title="Set Keyboard Layout"
             app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/SplitModes"
+            android:entryValues="@array/SplitModeValues"
+            android:key="split_keyboard"
+            android:title="Split keyboard (QWERTY)"
+            android:summary="Auto splits the main QWERTY into two halves on wide screens (tablets/foldables)" />
         <SwitchPreferenceCompat
             android:defaultValue="@bool/top_row_actions"
             android:key="top_row_actions"
