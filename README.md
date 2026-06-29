@@ -237,8 +237,8 @@ Z [*] ʒ   X ["]   V [:] ʌ   B [;]   M [?]
 
 ```
 ,  (comma)  → [ː] ˈ ˌ
-.  (period) → & % + · " _
-              ; / - : ' @
+.  (period) → · _ & % " +
+              - : @ ' / ;
               ( ) # ! [,] ?
 ```
 
@@ -309,8 +309,11 @@ Understanding these few facts explains most of the code:
    it handles shift-lock (code 16) and ctrl-lock (code 17). For keys that have an
    alternates popup, `KeyboardButtonView` runs its **own** `Handler`-based long-press
    that opens the popup. The **spacebar** no longer opens the IME picker on long-press;
-   instead, dragging it horizontally moves the caret (`onSpaceCursorMove`, which reuses
-   the arrow-key path and sets `longPressedSpaceButton` so no space is typed).
+   instead, dragging it horizontally moves the caret (`onSpaceCursorMove` uses
+   `InputConnection.setSelection` so the caret stays inside the field and stops at the
+   ends, with a per-character haptic tick; it sets `longPressedSpaceButton` so no space
+   is typed). A boundary-guarded arrow-key fallback covers editors without
+   `getExtractedText`.
 
 ### How a key-press becomes text (high level)
 

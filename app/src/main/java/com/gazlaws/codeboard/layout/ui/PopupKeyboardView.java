@@ -2,6 +2,7 @@ package com.gazlaws.codeboard.layout.ui;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.view.View;
 
 import com.gazlaws.codeboard.layout.builder.KeyInfo;
@@ -101,12 +102,14 @@ public class PopupKeyboardView extends View {
             int row = i / columns;
             float left = col * cellW;
             float top = row * cellH;
-            // The press preview is a single bright cell; in the grid, only the cell under the
-            // finger is bright. (isPreview is also a hook to style the preview differently later.)
-            boolean bright = isPreview || i == selectedIndex;
+            // Grid: only the cell under the finger (selected) is the brighter highlight. Preview:
+            // the single cell keeps the same previewBodyPaint the old lift preview used (only its
+            // shape/size changed, not its brightness). isPreview stays a hook for restyling later.
+            Paint cellPaint = (!isPreview && i == selectedIndex)
+                    ? uiTheme.popupSelectedPaint
+                    : uiTheme.previewBodyPaint;
             canvas.drawRoundRect(left + pad, top + pad, left + cellW - pad, top + cellH - pad,
-                    rx, rx,
-                    bright ? uiTheme.popupSelectedPaint : uiTheme.previewBodyPaint);
+                    rx, rx, cellPaint);
             float cx = left + cellW / 2f;
             float cy = top + cellH / 2f + uiTheme.fontHeight / 3f;
             canvas.drawText(chars[i], cx, cy, uiTheme.foregroundPaint);

@@ -26,6 +26,8 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.media.MediaPlayer; // for keypress sound
 
@@ -74,6 +76,8 @@ public class CodeBoardIME extends InputMethodService
     private KeyboardUiFactory mKeyboardUiFactory = null;
     private KeyboardLayoutView mCurrentKeyboardLayoutView = null;
     private boolean longPressedSpaceButton = false;
+    private int mSpaceCursorTarget = -1; // local caret target during a spacebar drag; -1 = not dragging
+    private int mSpaceCursorMax = 0;     // cached text length (max caret position) for the current drag
 
     @Override
     public void onKey(int primaryCode, int[] KeyCodes) {
@@ -444,13 +448,69 @@ public class CodeBoardIME extends InputMethodService
     }
 
     /**
-     * Called by the space key view while the finger is dragged horizontally across the
-     * spacebar. Each call nudges the caret one character left or right (reusing the arrow-key
-     * path) and marks the space as "used as a cursor" so onRelease will not also type a space.
+     * Called when a finger lands on the spacebar, before any drag. Forces the next cursor move to
+     * re-read the editor's real caret position (rather than reuse a stale target from a prior drag).
+     */
+    public void onSpaceCursorStart() {
+        mSpaceCursorTarget = -1;
+    }
+
+    /**
+     * Called by the space key view while the finger is dragged horizontally across the spacebar.
+     * Each call nudges the caret one character left or right. Unlike arrow keys, this uses
+     * InputConnection.setSelection so the caret stays inside the text field and simply stops at the
+     * ends (arrow keys would jump focus out of the field at the boundaries, which Gboard never
+     * does). A short haptic tick fires per character, like Gboard. Marks the space as "used as a
+     * cursor" so onRelease will not also type a space.
      */
     public void onSpaceCursorMove(boolean right) {
         longPressedSpaceButton = true;
-        onKey(right ? 5003 : 5000, null);
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) {
+            return;
+        }
+        if (mSpaceCursorTarget < 0) {
+            // First move of this drag: read the real caret position and text length.
+            ExtractedText et = ic.getExtractedText(new ExtractedTextRequest(), 0);
+            if (et != null && et.text != null) {
+                mSpaceCursorMax = et.startOffset + et.text.length();
+                mSpaceCursorTarget = et.startOffset + et.selectionStart;
+                if (mSpaceCursorTarget < 0) mSpaceCursorTarget = 0;
+                if (mSpaceCursorTarget > mSpaceCursorMax) mSpaceCursorTarget = mSpaceCursorMax;
+            } else {
+                // Editors that don't support getExtractedText (some web views): fall back to a
+                // boundary-guarded arrow key so the caret still won't leave the field.
+                boolean moved;
+                if (right) {
+                    CharSequence after = ic.getTextAfterCursor(1, 0);
+                    moved = after != null && after.length() > 0;
+                    if (moved) onKey(5003, null);
+                } else {
+                    CharSequence before = ic.getTextBeforeCursor(1, 0);
+                    moved = before != null && before.length() > 0;
+                    if (moved) onKey(5000, null);
+                }
+                if (moved) cursorTickVibrate();
+                return;
+            }
+        }
+        int newPos = right
+                ? Math.min(mSpaceCursorTarget + 1, mSpaceCursorMax)
+                : Math.max(mSpaceCursorTarget - 1, 0);
+        if (newPos != mSpaceCursorTarget) {
+            mSpaceCursorTarget = newPos;
+            ic.setSelection(newPos, newPos);
+            cursorTickVibrate();
+        }
+    }
+
+    private void cursorTickVibrate() {
+        if (vibratorOn) {
+            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null) {
+                vibrator.vibrate(vibrateLength);
+            }
+        }
     }
 
     public void onText(CharSequence text) {

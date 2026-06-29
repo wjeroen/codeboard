@@ -27,8 +27,9 @@ public class KeyboardButtonView extends View {
     private static final String TAG = "KeyboardButtonView";
     // Gboard's default "key long press delay" is 300ms; the alternates grid opens then.
     private static final int POPUP_DELAY_MS = 300;
-    // Finger travel (in dp) per one-character cursor step when dragging the spacebar.
-    private static final float CURSOR_STEP_DP = 16f;
+    // Finger travel (in dp) per one-character cursor step when dragging the spacebar (smaller =
+    // faster). Tunable.
+    private static final float CURSOR_STEP_DP = 11f;
 
     private final Key key;
     private final KeyboardView.OnKeyboardActionListener inputService;
@@ -65,6 +66,9 @@ public class KeyboardButtonView extends View {
                 if (isSpaceKey()){
                     spaceDragLastX = e.getRawX();
                     spaceDragAccum = 0f;
+                    if (inputService instanceof CodeBoardIME){
+                        ((CodeBoardIME) inputService).onSpaceCursorStart();
+                    }
                 }
                 onPress();
                 break;

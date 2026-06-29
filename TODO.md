@@ -43,12 +43,19 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] Stage 3 + preview refinements: (1) press preview keeps its original brightness
+      (`previewBodyPaint`); only its shape/size changed, not the colour. (2) Spacebar
+      cursor now moves the caret with `InputConnection.setSelection` (stays inside the
+      field, stops at the ends) instead of arrow-key events that jumped focus out;
+      slightly faster (`CURSOR_STEP_DP` 11) with a per-character haptic tick. (3) Bottom
+      row rebalanced: comma/period are now the same width as the letters, the spacebar is
+      wider, and Enter is about Esc/Tab/SYM width. (4) Period popup reordered to the
+      agreed layout (2026-06-29)
 - [x] Long-press keyboard Stage 3: **split keyboard** + **spacebar cursor**. A new
       "Split keyboard (QWERTY)" setting (Off / Auto / On; Auto splits at >= 600dp) pushes
       the main QWERTY into two halves with a central gap and duplicates the inner G and V
-      (`addGboardQwertyRows(builder, split)`). Dragging the spacebar horizontally now
-      moves the caret (`handleSpaceCursorDrag` -> `onSpaceCursorMove`, reusing the arrow
-      keys); space long-press no longer opens the IME picker (2026-06-28)
+      (`addGboardQwertyRows(builder, split)`). Dragging the spacebar horizontally moves
+      the caret; space long-press no longer opens the IME picker (2026-06-28)
 - [x] Long-press polish: pressing a key now instantly shows a bright single popup cell
       with just that character (same square shape as a grid cell); holding for 300ms
       (Gboard's default long-press delay) expands it into the alternates grid. Single-
@@ -129,7 +136,8 @@ still needs a design pass before it gets a plan here.
 
 Tunables worth revisiting after on-device testing (all in code, easy to change):
 - Split central gap width: `centerGap` in `Definitions.addGboardQwertyRows` (1.5).
-- Spacebar cursor sensitivity: `CURSOR_STEP_DP` in `KeyboardButtonView` (16dp/char).
+- Spacebar cursor sensitivity: `CURSOR_STEP_DP` in `KeyboardButtonView` (11dp/char).
+- Cursor haptic tick reuses the keypress vibration length (`vibrateLength`).
 - Auto-split screen threshold: 600dp in `CodeBoardIME.onCreateInputView`.
 
 ---

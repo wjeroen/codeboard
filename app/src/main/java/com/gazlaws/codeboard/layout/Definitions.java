@@ -311,13 +311,16 @@ public class Definitions {
     // Bottom row for the Gboard QWERTY: Ctrl, comma, space, period, enter.
     // Period carries the punctuation popup; comma carries the IPA stress/length marks.
     public void addGboardBottomRow(KeyboardLayoutBuilder keyboard) {
+        // Sizes sum to 10 (same as the 10-key letter rows), so Ctrl/comma/period come out the
+        // same width as the letters and Enter (1.5) ends up about as wide as Esc/Tab/SYM. The
+        // spacebar (5.5) takes the rest.
         keyboard.newRow()
                 .addKey("Ctrl", 17).asModifier().onCtrlShow("CTRL")
                 .addKey(',').withPopupNoCorner(3, "ː", "ː","ˈ","ˌ")
-                .addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32).withSize(4f)
+                .addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32).withSize(5.5f)
                 .addKey('.').withPopupNoCorner(6, ",",
-                        "&","%","+","·","\"","_",
-                        ";","/","-",":","'","@",
+                        "·","_","&","%","\"","+",
+                        "-",":","@","'","/",";",
                         "(",")","#","!",",","?")
                 .addEnterKey()
         ;
