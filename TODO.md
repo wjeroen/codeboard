@@ -53,6 +53,12 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Purple app icon everywhere** (2026-06-29): applied the same +113 deg hue shift used on
+      the purple Play Store icon to every in-APK icon (the 5-density adaptive foreground, the
+      legacy `ic_launcher`/`ic_launcher_round` rasters, the notification/intro `icon_large`, and
+      the keyboard-switcher `icon_old_1`), plus the adaptive background colour `#3CE2D4` ->
+      `#BD3CE2`. The launcher icon was unchanged before because modern Android builds it from the
+      adaptive foreground + background colour, not the raster that was edited.
 - [x] **Bright-theme popups, shadow layering, wider split margin** (2026-06-29):
   - Popup cells now **darken on bright themes** (luminance > 0.5) instead of lifting toward
     white, which was invisible on a light keyboard. Both levels flip (press/preview and the
