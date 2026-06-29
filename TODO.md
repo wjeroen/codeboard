@@ -53,11 +53,12 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
-- [x] **Reverted the fixed number row** (2026-06-29): the top row is the editable "Main
-      keyboard [Top Row]" again (default `` `1234567890-= ``), wired through `input_symbols_main`
-      / `addCustomRow`. The fixed fraction-popup row (`addGboardNumberRow`) is kept in the code
-      but unused. Split keyboard now defaults to **Off** (was Auto) in both `preferences.xml`
-      and `KeyboardPreferences.getSplitMode`.
+- [x] **Editable top row + fraction popups on any digit** (2026-06-29): the top row is the
+      editable "Main keyboard [Top Row]" again (default `` `1234567890-= ``), wired through
+      `input_symbols_main` / `addCustomRow`. The Gboard superscript/fraction long-press popups
+      are now attached to **any digit key** automatically (`addDigitFractionPopup`, called from
+      `addCustomRow`), so they survive customisation. The old fixed `addGboardNumberRow` was
+      removed (its data moved into `addDigitFractionPopup`). Split default stays **Auto**.
 - [x] **Bright-theme popups, shadow layering, wider split margin** (2026-06-29):
   - Popup cells now **darken on bright themes** (luminance > 0.5) instead of lifting toward
     white, which was invisible on a light keyboard. Both levels flip (press/preview and the

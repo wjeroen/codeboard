@@ -94,12 +94,12 @@
             android:title="Set Keyboard Layout"
             app:useSimpleSummaryProvider="true" />
         <ListPreference
-            android:defaultValue="off"
+            android:defaultValue="auto"
             android:entries="@array/SplitModes"
             android:entryValues="@array/SplitModeValues"
             android:key="split_keyboard"
             android:title="Split keyboard"
-            android:summary="Splits the keyboard into two halves. Auto does it on wide screens (tablets/foldables)" />
+            android:summary="Auto splits the keyboard into two halves on wide screens (tablets/foldables)" />
         <SwitchPreferenceCompat
             android:defaultValue="@bool/top_row_actions"
             android:key="top_row_actions"

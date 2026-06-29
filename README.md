@@ -52,9 +52,11 @@ deciding whether to switch, this is what to expect:
   [Long-press reference](#long-press-reference)).
 - **Spacebar cursor:** drag the spacebar left/right to move the caret (haptic tick per
   character).
-- **Split keyboard** for wide screens (tablets/foldables), Off (default) / Auto / On in
-  settings; splits the letters, number row, and symbol rows, and caps each half's width
-  so the keys stay near your thumbs instead of stretching on very wide screens.
+- **Number keys long-press to fractions** (Gboard-style): any digit on the editable top
+  row holds for its superscript plus common fractions (e.g. `1` → `½ … ⅒`).
+- **Split keyboard** for wide screens (tablets/foldables), Off / Auto / On in settings
+  (Auto by default); splits the letters and symbol rows, and caps each half's width so the
+  keys stay near your thumbs instead of stretching on very wide screens.
 - **Up-arrow Shift key** (matches the backspace width) with a clear **caps-lock**
   indicator (underlined arrow; double-tap or long-press to lock), and a symmetric
   bottom row (equal-width Ctrl and Enter, letter-width comma/period).
@@ -196,7 +198,7 @@ committed, always keep that in secrets.
 - **Drag the Spacebar** left/right to move the cursor character by character, with a
   haptic tick per character (a plain tap still types a space). This replaced the old
   space long-press IME picker.
-- **Split keyboard:** Settings has an Off / Auto / On switch (Off by default). Auto splits
+- **Split keyboard:** Settings has an Off / Auto / On switch (Auto by default). Auto splits
   the keyboard into two halves on wide screens (>= 600dp, tablets/foldables). The letter rows
   duplicate their inner key (e.g. G and V on QWERTY) so each thumb has one; the number,
   symbol, and custom rows split down the middle. On very wide screens each half stops
@@ -228,10 +230,22 @@ gets typed.
 > their popup *arrangement* (which cell is the default, column count) is generic for now
 > and may be tuned per layout later. See [`TODO.md`](./TODO.md).
 
-The **top row** is the editable "Main keyboard [Top Row]" again (default
-`` `1234567890-= ``), so it has no fixed corner symbols or fraction popups. (A fixed
-Gboard-style number row with superscript/fraction popups still exists in the code as
-`addGboardNumberRow`, just not wired up; it can be swapped back in.)
+**Number keys** (the top row is the editable "Main keyboard [Top Row]", default
+`` `1234567890-= ``; any digit, wherever it lands, holds for its superscript default plus
+fractions, no corner symbol):
+
+```
+1 → ⅙ ⅐ ⅛ ⅑ ⅒  /  [¹] ½ ⅓ ¼ ⅕
+2 → [²] ⅖ ⅔
+3 → [³] ⅗ ¾ ⅜
+4 → [⁴] ⅘
+5 → [⁵] ⅝ ⅚
+6 → [⁶]
+7 → ⅞ [⁷]
+8 → [⁸]
+9 → [⁹]
+0 → ⁿ ∅ [⁰]
+```
 
 **Corner symbols** (letters)
 
@@ -290,7 +304,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **View Keyboard** | Open the IME picker; a scratch text field to test typing. |
 | **Features** | Key-press sound, vibration (+ length in ms), font size, keyboard size (portrait and landscape), key-press preview, notification shortcut. |
 | **Colour** | Theme picker, custom theme toggle with background/foreground color pickers, key borders, dynamic navigation-bar coloring. |
-| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off default / Auto / On)**, "top row actions" toggle, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth). The letter rows are fixed. |
+| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off / Auto / On, Auto default)**, "top row actions" toggle, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth). The letter rows are fixed. |
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
@@ -378,7 +392,7 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `CodeBoardIME.java` | The IME service. Assembles the keyboard, owns the long-press `Timer`, `onPress` / `onKey` / `onText` / `onKeyLongPress`, and dispatches characters and key events to the active text field. |
 | `layout/Box.java` | Normalized (0.0 to 1.0) rectangle used to position a key. |
 | `layout/Key.java` | Runtime model of a placed key (its `Box` + its `KeyInfo`). |
-| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows (incl. the editable top row). `addGboardNumberRow` is the fixed fraction-popup number row, kept but currently unused. Per-letter long-press is split into shared accent **data** (`letterSymbol` / `letterAccents`) and per-layout **arrangement** (`addLetterKey`, the seam for future per-layout tuning; QWERTY keeps a hand-tuned arrangement inline). `splitCurrentRow` adds the central split gap to rows that have no manual split. |
+| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows (incl. the editable top row; `addCustomRow` attaches digit fraction popups via `addDigitFractionPopup`). Per-letter long-press is split into shared accent **data** (`letterSymbol` / `letterAccents`) and per-layout **arrangement** (`addLetterKey`, the seam for future per-layout tuning; QWERTY keeps a hand-tuned arrangement inline). `splitCurrentRow` adds the central split gap to rows that have no manual split. |
 | `layout/builder/KeyboardLayoutBuilder.java` | Fluent builder that assembles rows/keys and computes the normalized layout. |
 | `layout/builder/KeyboardLayoutRowBuilder.java` | Distributes key widths within a single row. |
 | `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, the long-press fields `cornerLabel` / `popupChars` / `popupDefaultIndex` / `popupColumns`, and `isSpacer` for empty gap "keys"). |
