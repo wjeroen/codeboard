@@ -30,6 +30,9 @@ public class KeyboardButtonView extends View {
     // Finger travel (in dp) per one-character cursor step when dragging the spacebar (smaller =
     // faster). Tunable.
     private static final float CURSOR_STEP_DP = 11f;
+    // How far (px) the floating popup (preview cell and alternates grid) sits above the key top.
+    // Half of the old in-place key lift (200px). Tunable.
+    private static final float POPUP_LIFT_PX = 100f;
 
     private final Key key;
     private final KeyboardView.OnKeyboardActionListener inputService;
@@ -44,6 +47,7 @@ public class KeyboardButtonView extends View {
     private PopupWindow popupWindow;
     private PopupKeyboardView popupKeyboardView;
     private boolean popupIsGrid = false; // false = single-cell press preview, true = alternates grid
+    private boolean shiftActive = false; // tracks shift so the popup can show uppercased alternates
     private float spaceDragLastX = 0f;   // last finger X while dragging the spacebar (cursor mode)
     private float spaceDragAccum = 0f;   // unspent horizontal travel toward the next cursor step
 
@@ -185,9 +189,9 @@ public class KeyboardButtonView extends View {
         } else {
             submitKeyEvent();
         }
-        if (uiTheme.enablePreview && hasCharPreview()){
-            // Instant preview: a single bright popup cell showing just the pressed character.
-            // If the key is held, it expands into the alternates grid (showPopup).
+        if (uiTheme.enablePreview && hasPreview()){
+            // Instant preview: a single floating popup cell showing the key's content (character,
+            // label, or icon). If the key is held and has alternates, it expands into the grid.
             showPreviewPopup();
         }
         animatePress();
@@ -239,13 +243,10 @@ public class KeyboardButtonView extends View {
         return key.info.popupChars != null && key.info.popupChars.length > 0;
     }
 
-    /** A key that types a single character (letter / digit / symbol): gets the popup-cell
-     *  press preview. Icon keys, modifiers, and multi-char keys (Esc/Tab/SYM) do not. */
-    private boolean hasCharPreview(){
-        return key.info.icon == null
-                && !key.info.isModifier
-                && currentLabel != null
-                && currentLabel.length() == 1;
+    /** Every key shows the floating popup-cell press preview, except the spacebar (it is a
+     *  cursor-drag control and brightens in place instead). */
+    private boolean hasPreview(){
+        return !isSpaceKey();
     }
 
     private boolean isSpaceKey(){
@@ -335,14 +336,17 @@ public class KeyboardButtonView extends View {
         int[] windowLoc = new int[2];
         getLocationInWindow(windowLoc);
 
-        int popupW = (int) (columns * cellW);
-        int popupH = (int) (rowCount * cellH);
+        // The popup is the cell block plus a transparent margin all round for the drop shadow.
+        int pad = PopupKeyboardView.SHADOW_PAD;
+        int popupW = (int) (columns * cellW) + 2 * pad;
+        int popupH = (int) (rowCount * cellH) + 2 * pad;
 
-        // Anchor so the selected/default cell sits directly above the key (column-aligned), with
-        // the bottom row just above the key top. Resting the finger keeps the default selected;
+        // Anchor so the selected/default cell sits directly above the key (column-aligned), with the
+        // cell block floating POPUP_LIFT_PX above the key top. The -pad backs out the shadow margin
+        // so the cells still land in the same place. Resting the finger keeps the default selected;
         // sliding moves the highlight. These are screen-absolute coordinates.
-        int originX = (int) (screenLoc[0] - defaultCol * cellW);
-        int originY = (int) (screenLoc[1] - rowCount * cellH);
+        int originX = (int) (screenLoc[0] - defaultCol * cellW) - pad;
+        int originY = (int) (screenLoc[1] - rowCount * cellH - POPUP_LIFT_PX) - pad;
 
         // Keep the popup fully on screen horizontally.
         int screenW = getResources().getDisplayMetrics().widthPixels;
@@ -353,9 +357,9 @@ public class KeyboardButtonView extends View {
             popupKeyboardView = new PopupKeyboardView(getContext(), uiTheme);
         }
         if (popupIsGrid){
-            popupKeyboardView.configure(key.info, cellW, cellH, originX, originY);
+            popupKeyboardView.configure(key.info, shiftActive, cellW, cellH, originX, originY);
         } else {
-            popupKeyboardView.configurePreview(currentLabel, cellW, cellH, originX, originY);
+            popupKeyboardView.configurePreview(currentLabel, key.info.icon, cellW, cellH, originX, originY);
         }
 
         if (popupWindow == null){
@@ -364,6 +368,9 @@ public class KeyboardButtonView extends View {
             popupWindow.setTouchable(false);
             popupWindow.setFocusable(false);
             popupWindow.setBackgroundDrawable(null);
+            // No window animation: stops the popup sliding/jumping into place when the preview
+            // resizes into the grid (the per-key reposition some keys showed on long-press).
+            popupWindow.setAnimationStyle(0);
         }
 
         // showAtLocation/update want window coordinates; convert from screen by removing the
@@ -436,11 +443,6 @@ public class KeyboardButtonView extends View {
             this.setAlpha(.1f);
             return;
         }
-        if (hasCharPreview()){
-            // Char keys: the bright preview popup cell (shown in onPress) is the feedback, so the
-            // key itself stays put. Held, that cell expands into the alternates grid.
-            return;
-        }
         if (isSpaceKey()){
             // The spacebar is a cursor-drag control, so just brighten it (don't lift it, which
             // would look odd while sliding horizontally).
@@ -448,13 +450,8 @@ public class KeyboardButtonView extends View {
             invalidate();
             return;
         }
-        // Icon / modifier / multi-char keys have no text popup, so lift the key in place instead.
-        isPreviewActive = true;
-        this.setTranslationY(-200.0f);
-        this.setScaleX(1.2f);
-        this.setScaleY(1.2f);
-        this.setElevation(21.0f);
-        invalidate();
+        // Every other key now shows the floating preview popup cell (started in onPress) as its
+        // feedback, so the key itself stays put (no more lift-in-place).
     }
     private void animateRelease() {
         if (uiTheme.enablePreview){
@@ -470,6 +467,9 @@ public class KeyboardButtonView extends View {
     }
 
     public void applyShiftModifier(boolean shiftPressed) {
+        // Remember shift for every key (even ones with no shift label) so an open alternates popup
+        // can display its characters uppercased to match what will actually be typed.
+        this.shiftActive = shiftPressed;
         if (this.key.info.onShiftLabel != null){
             String nextLabel = shiftPressed
                     ? this.key.info.onShiftLabel

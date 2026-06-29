@@ -610,14 +610,16 @@ public class CodeBoardIME extends InputMethodService
         Definitions definitions = new Definitions(this);
         try {
             KeyboardLayoutBuilder builder = new KeyboardLayoutBuilder(this);
-            // Small left/right margins (Gboard-style), full height, nothing top/bottom. Tunable.
-            float sidePadding = 0.015f;
-            builder.setBox(Box.create(sidePadding, 0, 1 - 2 * sidePadding, 1));
 
             String splitMode = sharedPreferences.getSplitMode();
             boolean split = splitMode.equals("on")
                     || (splitMode.equals("auto")
                         && getResources().getConfiguration().screenWidthDp >= 600);
+
+            // Left/right margins only in split mode (a Gboard-style thumb gap on wide screens);
+            // normal mode is edge-to-edge. Full height, nothing top/bottom. Tunable.
+            float sidePadding = split ? 0.03f : 0f;
+            builder.setBox(Box.create(sidePadding, 0, 1 - 2 * sidePadding, 1));
 
             if (mToprow) {
                 definitions.addCopyPasteRow(builder);

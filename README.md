@@ -215,6 +215,12 @@ Lifting without sliding types the default; sliding the finger onto another cell
 highlights it and types that one instead. Single-option keys work the same way, they
 just show one cell.
 
+Every key uses this same floating cell now (Ctrl, Backspace, Enter, the F-keys, and so
+on, not just letters), each with a soft drop shadow, floating just above the key. The
+spacebar is the one exception: it stays put and brightens, because dragging it is the
+cursor control. While Shift is held, the alternates are shown capitalised, matching what
+gets typed.
+
 > The tables below are the **QWERTY** reference. AZERTY, Dvorak, and QWERTZ share the
 > same per-letter accents (a letter's accents follow the letter, not its position), but
 > their popup *arrangement* (which cell is the default, column count) is generic for now
@@ -233,7 +239,7 @@ fractions):
 7 → ⅞ [⁷]
 8 → [⁸]
 9 → [⁹]
-0 → ∅ [⁰]
+0 → ⁿ ∅ [⁰]
 ```
 
 **Corner symbols** (letters)
@@ -254,7 +260,7 @@ O → ɔ̃ œ̃ õ ō ø ò  /  ɔ œ ö ô ó [{]
 U → ũ ù ū ʊ  /  û [<] ú ü
 Y → ʏ ij [ ] ] ÿ ý
 C → ć ['] ç č
-N → ń [!] ñ ŋ ɲ
+N → ŋ ɲ ń [!] ñ
 S → [#] ß ʃ
 J → [+] j́
 D → [€] $ £ ¥ ¢ ð

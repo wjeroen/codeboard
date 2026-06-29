@@ -11,7 +11,7 @@ public class Definitions {
     private static final int CODE_SYMBOLS = -1;
     // Width of the central gap in split mode (in key-widths). Shared by the letter rows and the
     // (non-splitting) bottom row so the spacebar can absorb exactly this much when split.
-    private static final float SPLIT_CENTER_GAP = 1.5f;
+    private static final float SPLIT_CENTER_GAP = 2.0f;
 
     public Definitions(Context current) {
         this.context = current;
@@ -69,7 +69,7 @@ public class Definitions {
                 .addKey('7').withPopupNoCorner(2, "⁷", "⅞","⁷")
                 .addKey('8').withPopupNoCorner(1, "⁸", "⁸")
                 .addKey('9').withPopupNoCorner(1, "⁹", "⁹")
-                .addKey('0').withPopupNoCorner(2, "⁰", "∅","⁰");
+                .addKey('0').withPopupNoCorner(3, "⁰", "ⁿ","∅","⁰");
     }
 
     // --- Per-letter long-press, split into shared DATA and per-layout ARRANGEMENT ---------------
@@ -328,7 +328,8 @@ public class Definitions {
     public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard, boolean split) {
         float centerGap = SPLIT_CENTER_GAP; // width of the central split gap, in key-widths
         // Shift and Backspace are equal width and sized so the z..m letters stay letter-width,
-        // matching the home row total (10 normal, 11.5 split). Up-arrow icon on Shift (addShiftKey).
+        // matching the home row total (10 normal, 10 + the central gap when split). Up-arrow icon
+        // on Shift (addShiftKey).
         float shiftSize = split ? 1.0f : 1.5f;
 
         // Row 1: q w e r t | y u i o p
@@ -369,7 +370,7 @@ public class Definitions {
                 .addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
         if (split) keyboard.addGap(centerGap).addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
         keyboard.addKey('b').onShiftUppercase().withPopup(1, ";", ";")
-                .addKey('n').onShiftUppercase().withPopup(5, "!", "ń","!","ñ","ŋ","ɲ")
+                .addKey('n').onShiftUppercase().withPopup(5, "!", "ŋ","ɲ","ń","!","ñ")
                 .addKey('m').onShiftUppercase().withPopup(1, "?", "?")
                 .addBackspaceKey().withSize(shiftSize);
     }
