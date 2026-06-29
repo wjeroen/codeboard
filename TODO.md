@@ -53,12 +53,12 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
-- [x] **Editable top row + fraction popups on any digit** (2026-06-29): the top row is the
-      editable "Main keyboard [Top Row]" again (default `` `1234567890-= ``), wired through
-      `input_symbols_main` / `addCustomRow`. The Gboard superscript/fraction long-press popups
-      are now attached to **any digit key** automatically (`addDigitFractionPopup`, called from
-      `addCustomRow`), so they survive customisation. The old fixed `addGboardNumberRow` was
-      removed (its data moved into `addDigitFractionPopup`). Split default stays **Auto**.
+- [x] **Purple app icon everywhere** (2026-06-29): applied the same +113 deg hue shift used on
+      the purple Play Store icon to every in-APK icon (the 5-density adaptive foreground, the
+      legacy `ic_launcher`/`ic_launcher_round` rasters, the notification/intro `icon_large`, and
+      the keyboard-switcher `icon_old_1`), plus the adaptive background colour `#3CE2D4` ->
+      `#BD3CE2`. The launcher icon was unchanged before because modern Android builds it from the
+      adaptive foreground + background colour, not the raster that was edited.
 - [x] **Bright-theme popups, shadow layering, wider split margin** (2026-06-29):
   - Popup cells now **darken on bright themes** (luminance > 0.5) instead of lifting toward
     white, which was invisible on a light keyboard. Both levels flip (press/preview and the
