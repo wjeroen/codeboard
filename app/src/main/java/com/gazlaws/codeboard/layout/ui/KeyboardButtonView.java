@@ -40,6 +40,7 @@ public class KeyboardButtonView extends View {
     private Runnable longPressRunnable;
     private PopupWindow popupWindow;
     private PopupKeyboardView popupKeyboardView;
+    private boolean popupIsGrid = false; // false = single-cell press preview, true = alternates grid
 
     public KeyboardButtonView(Context context, Key key, KeyboardView.OnKeyboardActionListener inputService, UiTheme uiTheme) {
         super(context);
@@ -60,7 +61,7 @@ public class KeyboardButtonView extends View {
                 onPress();
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (isPopupShowing()){
+                if (isPopupShowing() && popupIsGrid){
                     popupKeyboardView.updateSelection(e.getRawX(), e.getRawY());
                 }
                 break;
@@ -112,10 +113,7 @@ public class KeyboardButtonView extends View {
         float y = this.getHeight()/2 + uiTheme.fontHeight/3;
         canvas.drawText(currentLabel, x, y, uiTheme.foregroundPaint);
 
-        // Hide the corner symbol while the key is lifted as a preview, so the instant preview
-        // shows only the character you pressed. The corner/alternates appear in the popup grid
-        // after the long-press delay instead.
-        if (key.info.cornerLabel != null && !isPreviewActive){
+        if (key.info.cornerLabel != null){
             float pad = uiTheme.buttonBodyPadding * 2.5f;
             canvas.drawText(key.info.cornerLabel,
                     this.getWidth() - pad,
@@ -168,10 +166,15 @@ public class KeyboardButtonView extends View {
         }
         if (hasPopup()){
             // Defer output: a quick tap types the key on release, a long hold opens the
-            // popup (Stage 2) and types the selected alternate instead.
+            // alternates grid and types the selected alternate instead.
             scheduleLongPress();
         } else {
             submitKeyEvent();
+        }
+        if (uiTheme.enablePreview && hasCharPreview()){
+            // Instant preview: a single bright popup cell showing just the pressed character.
+            // If the key is held, it expands into the alternates grid (showPopup).
+            showPreviewPopup();
         }
         animatePress();
     }
@@ -181,17 +184,18 @@ public class KeyboardButtonView extends View {
 //      NOTE: If the arrow keys move out of the input view, the onRelease is never called
         if (hasPopup()){
             cancelPopupLongPress();
-            if (isPopupShowing()){
-                // Slid onto an alternate (or rested on the default): type the highlighted cell.
+            if (isPopupShowing() && popupIsGrid){
+                // Grid is up: type the highlighted cell (the default if the finger didn't slide).
                 commitPopupChar(popupKeyboardView.getSelectedChar());
-                dismissPopup();
             } else if (popupLongPressFired){
-                // Held a key whose popup has no real alternates: type its default char.
+                // Grid failed to show but the hold fired: type the default alternate.
                 commitPopupChar(key.info.popupChars[key.info.popupDefaultIndex]);
             } else {
+                // Quick tap: type the key itself.
                 submitKeyEvent();
             }
         }
+        dismissPopup();
         if (key.info.code != 0){
             inputService.onRelease(key.info.code);
         }
@@ -219,6 +223,15 @@ public class KeyboardButtonView extends View {
 
     private boolean hasPopup(){
         return key.info.popupChars != null && key.info.popupChars.length > 0;
+    }
+
+    /** A key that types a single character (letter / digit / symbol): gets the popup-cell
+     *  press preview. Icon keys, modifiers, and multi-char keys (Esc/Tab/SYM) do not. */
+    private boolean hasCharPreview(){
+        return key.info.icon == null
+                && !key.info.isModifier
+                && currentLabel != null
+                && currentLabel.length() == 1;
     }
 
     private void scheduleLongPress(){
@@ -254,24 +267,32 @@ public class KeyboardButtonView extends View {
         return popupWindow != null && popupWindow.isShowing();
     }
 
+    /** Instant press preview: one bright cell showing just the character pressed. */
+    private void showPreviewPopup(){
+        popupIsGrid = false;
+        showOrUpdatePopup(1, 1, 0);
+    }
+
+    /** Long-press: expand the preview into the full grid of alternates. */
     private void showPopup(){
         if (key.info.popupChars == null || key.info.popupChars.length < 1){
             return;
         }
-        // End the instant lift preview first, so the key is back at its true position before we
-        // measure where to anchor the popup grid.
-        isPreviewActive = false;
-        setTranslationY(0f);
-        setScaleX(1f);
-        setScaleY(1f);
-        setElevation(0f);
-        invalidate();
+        popupIsGrid = true;
+        int cols = Math.max(1, key.info.popupColumns);
+        int rowCount = (int) Math.ceil(key.info.popupChars.length / (float) cols);
+        int defaultCol = key.info.popupDefaultIndex % cols;
+        showOrUpdatePopup(cols, rowCount, defaultCol);
+    }
 
+    /**
+     * Show (or, if already up, resize-in-place) the popup above the key. The dimensions come from
+     * the args; whether it draws the single-cell press preview or the full alternates grid is
+     * decided by popupIsGrid (set by the caller before calling).
+     */
+    private void showOrUpdatePopup(int columns, int rowCount, int defaultCol){
         float cellW = getWidth();
         float cellH = getHeight();
-        int columns = Math.max(1, key.info.popupColumns);
-        int rowCount = (int) Math.ceil(key.info.popupChars.length / (float) columns);
-        int defaultCol = key.info.popupDefaultIndex % columns;
 
         int[] screenLoc = new int[2];
         getLocationOnScreen(screenLoc);
@@ -281,9 +302,9 @@ public class KeyboardButtonView extends View {
         int popupW = (int) (columns * cellW);
         int popupH = (int) (rowCount * cellH);
 
-        // Anchor the popup so its default cell sits directly above the key (column-aligned),
-        // with the bottom row just above the key top. Resting the finger then keeps the default
-        // selected; sliding up/sideways moves the highlight. These are screen-absolute coords.
+        // Anchor so the selected/default cell sits directly above the key (column-aligned), with
+        // the bottom row just above the key top. Resting the finger keeps the default selected;
+        // sliding moves the highlight. These are screen-absolute coordinates.
         int originX = (int) (screenLoc[0] - defaultCol * cellW);
         int originY = (int) (screenLoc[1] - rowCount * cellH);
 
@@ -292,25 +313,40 @@ public class KeyboardButtonView extends View {
         if (originX + popupW > screenW) originX = screenW - popupW;
         if (originX < 0) originX = 0;
 
-        popupKeyboardView = new PopupKeyboardView(getContext(), uiTheme);
-        popupKeyboardView.configure(key.info, cellW, cellH, originX, originY);
+        if (popupKeyboardView == null){
+            popupKeyboardView = new PopupKeyboardView(getContext(), uiTheme);
+        }
+        if (popupIsGrid){
+            popupKeyboardView.configure(key.info, cellW, cellH, originX, originY);
+        } else {
+            popupKeyboardView.configurePreview(currentLabel, cellW, cellH, originX, originY);
+        }
 
-        popupWindow = new PopupWindow(popupKeyboardView, popupW, popupH, false);
-        popupWindow.setClippingEnabled(false);
-        popupWindow.setTouchable(false);
-        popupWindow.setFocusable(false);
-        popupWindow.setBackgroundDrawable(null);
+        if (popupWindow == null){
+            popupWindow = new PopupWindow(popupKeyboardView, popupW, popupH, false);
+            popupWindow.setClippingEnabled(false);
+            popupWindow.setTouchable(false);
+            popupWindow.setFocusable(false);
+            popupWindow.setBackgroundDrawable(null);
+        }
 
-        // showAtLocation wants window coordinates; convert from screen by removing the window's
-        // on-screen offset (screenLoc - windowLoc).
+        // showAtLocation/update want window coordinates; convert from screen by removing the
+        // window's on-screen offset (screenLoc - windowLoc).
         int winX = originX - (screenLoc[0] - windowLoc[0]);
         int winY = originY - (screenLoc[1] - windowLoc[1]);
         try {
-            popupWindow.showAtLocation(this, Gravity.NO_GRAVITY, winX, winY);
+            if (popupWindow.isShowing()){
+                popupWindow.update(winX, winY, popupW, popupH);
+            } else {
+                popupWindow.setWidth(popupW);
+                popupWindow.setHeight(popupH);
+                popupWindow.showAtLocation(this, Gravity.NO_GRAVITY, winX, winY);
+            }
         } catch (Exception e){
-            // If the window token isn't ready yet, fall back to typing the default on release.
+            // If the window token isn't ready yet, drop the popup and fall back to plain typing.
             popupWindow = null;
             popupKeyboardView = null;
+            popupIsGrid = false;
         }
     }
 
@@ -323,6 +359,7 @@ public class KeyboardButtonView extends View {
             popupWindow = null;
         }
         popupKeyboardView = null;
+        popupIsGrid = false;
     }
 
     private void onCancel(){
@@ -359,19 +396,22 @@ public class KeyboardButtonView extends View {
     }
 
     private void animatePress(){
-        if (uiTheme.enablePreview){
-            // Instant preview: the pressed key magnifies in place, showing just the character
-            // (its corner symbol is hidden while lifted, see drawButtonContent). If the key is
-            // held past the long-press delay, showPopup() ends this lift and opens the grid.
-            isPreviewActive = true;
-            this.setTranslationY(-200.0f);
-            this.setScaleX(1.2f);
-            this.setScaleY(1.2f);
-            this.setElevation(21.0f);
-            invalidate();
-        } else {
+        if (!uiTheme.enablePreview){
             this.setAlpha(.1f);
+            return;
         }
+        if (hasCharPreview()){
+            // Char keys: the bright preview popup cell (shown in onPress) is the feedback, so the
+            // key itself stays put. Held, that cell expands into the alternates grid.
+            return;
+        }
+        // Icon / modifier / multi-char keys have no text popup, so lift the key in place instead.
+        isPreviewActive = true;
+        this.setTranslationY(-200.0f);
+        this.setScaleX(1.2f);
+        this.setScaleY(1.2f);
+        this.setElevation(21.0f);
+        invalidate();
     }
     private void animateRelease() {
         if (uiTheme.enablePreview){

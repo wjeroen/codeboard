@@ -8,7 +8,8 @@ import com.gazlaws.codeboard.layout.builder.KeyInfo;
 import com.gazlaws.codeboard.theme.UiTheme;
 
 /**
- * The grid of alternates shown above a key during a long-press. It is display-only:
+ * The popup shown above a key. Used in two ways: a single bright cell as the instant
+ * press preview, and the full grid of alternates on a long-press. It is display-only:
  * the pressed key view keeps the touch gesture and forwards absolute finger
  * coordinates here (updateSelection) so this view can highlight the cell under the
  * finger. On release the key view reads getSelectedChar().
@@ -24,6 +25,7 @@ public class PopupKeyboardView extends View {
     private float cellH = 0;
     private int originX = 0; // popup top-left in absolute (screen) coordinates
     private int originY = 0;
+    private boolean isPreview = false; // true = single-cell press preview; false = alternates grid
 
     public PopupKeyboardView(Context context, UiTheme uiTheme) {
         super(context);
@@ -31,11 +33,25 @@ public class PopupKeyboardView extends View {
         setWillNotDraw(false);
     }
 
+    /** Configure as the full grid of a key's long-press alternates. */
     public void configure(KeyInfo info, float cellW, float cellH, int originX, int originY) {
-        this.chars = info.popupChars;
-        this.columns = Math.max(1, info.popupColumns);
-        this.rows = (int) Math.ceil(this.chars.length / (float) this.columns);
-        this.selectedIndex = info.popupDefaultIndex;
+        this.isPreview = false;
+        setCells(info.popupChars, info.popupColumns, info.popupDefaultIndex,
+                cellW, cellH, originX, originY);
+    }
+
+    /** Configure as the single-cell instant press preview of one character. */
+    public void configurePreview(String character, float cellW, float cellH, int originX, int originY) {
+        this.isPreview = true;
+        setCells(new String[]{ character }, 1, 0, cellW, cellH, originX, originY);
+    }
+
+    private void setCells(String[] chars, int columns, int selectedIndex,
+                          float cellW, float cellH, int originX, int originY) {
+        this.chars = chars;
+        this.columns = Math.max(1, columns);
+        this.rows = (int) Math.ceil(chars.length / (float) this.columns);
+        this.selectedIndex = selectedIndex;
         this.cellW = cellW;
         this.cellH = cellH;
         this.originX = originX;
@@ -85,9 +101,12 @@ public class PopupKeyboardView extends View {
             int row = i / columns;
             float left = col * cellW;
             float top = row * cellH;
+            // The press preview is a single bright cell; in the grid, only the cell under the
+            // finger is bright. (isPreview is also a hook to style the preview differently later.)
+            boolean bright = isPreview || i == selectedIndex;
             canvas.drawRoundRect(left + pad, top + pad, left + cellW - pad, top + cellH - pad,
                     rx, rx,
-                    i == selectedIndex ? uiTheme.popupSelectedPaint : uiTheme.previewBodyPaint);
+                    bright ? uiTheme.popupSelectedPaint : uiTheme.previewBodyPaint);
             float cx = left + cellW / 2f;
             float cy = top + cellH / 2f + uiTheme.fontHeight / 3f;
             canvas.drawText(chars[i], cx, cy, uiTheme.foregroundPaint);

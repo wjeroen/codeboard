@@ -186,14 +186,13 @@ committed, always keep that in secrets.
 ## Long-press reference
 
 The **QWERTY** layout is Gboard-style. Each letter shows a small **corner symbol**
-(top-right). **Pressing** a key instantly previews just that character (the key
-magnifies in place, with the corner symbol hidden). **Holding** for 300ms (Gboard's
-default long-press delay) turns that preview into a popup grid of alternates above
-the key: the **[default]** (shown in brackets, which is also the corner symbol) plus
-every option. Lifting without sliding types the default; sliding the finger onto
-another cell highlights it and types that one instead. Single-option keys work the
-same way, they just show one cell. The other layouts (AZERTY, Dvorak, QWERTZ) are
-unchanged.
+(top-right). **Pressing** a key instantly shows a bright popup cell above it with just
+that character (same square shape as a grid cell). **Holding** for 300ms (Gboard's
+default long-press delay) expands that cell into a popup grid of alternates: the
+**[default]** (shown in brackets, which is also the corner symbol) plus every option.
+Lifting without sliding types the default; sliding the finger onto another cell
+highlights it and types that one instead. Single-option keys work the same way, they
+just show one cell. The other layouts (AZERTY, Dvorak, QWERTZ) are unchanged.
 
 **Corner symbols**
 
@@ -287,16 +286,15 @@ Understanding these few facts explains most of the code:
    are fractions from 0.0 to 1.0 of the keyboard's width and height. They are
    converted to pixels in `KeyboardButtonView.layout()`. Because geometry is
    purely relative, layout transforms (like a future split keyboard) are easy.
-3. **Press preview, then long-press alternates.** (a) The instant *preview*: when
-   `enablePreview` is on, pressing any key lifts the same key `View` with
-   `setTranslationY(-200)` + `setScaleX/Y(1.2)` + `setElevation(21)` in
-   `animatePress()`, drawn with a brighter `previewBodyPaint`. While lifted, the
-   corner symbol is hidden (`drawButtonContent`), so the preview shows only the
-   character pressed. (b) The *alternates*: holding a key with a popup spec for
-   `POPUP_DELAY_MS` (300ms) ends the lift and opens a `PopupKeyboardView` (a grid of
-   alternates) in a non-touchable `PopupWindow` anchored above the key. `showPopup()`
-   resets the lift transform before measuring so the grid anchors to the key's true
-   position.
+3. **Press preview, then long-press alternates.** Both are the same `PopupKeyboardView`
+   in a non-touchable `PopupWindow` above the key. (a) The instant *preview* (character
+   keys, `hasCharPreview()`): on press, a single bright cell showing just the pressed
+   character (`configurePreview`). (b) The *alternates*: holding for `POPUP_DELAY_MS`
+   (300ms) calls `showPopup()`, which resizes that same popup into the full grid
+   (`configure(KeyInfo)`) with the default cell bright. The popup is anchored so the
+   default/selected cell sits above the key. Icon, modifier, and multi-char keys have
+   no text popup, so they instead lift in place (`setTranslationY(-200)` + scale) in
+   `animatePress()`.
 4. **Long-press has two paths.** For modifier and space keys,
    `CodeBoardIME.onPress()` starts a `Timer` that fires `onKeyLongPress()` after
    `ViewConfiguration.getLongPressTimeout()`; it handles shift-lock (code 16),
