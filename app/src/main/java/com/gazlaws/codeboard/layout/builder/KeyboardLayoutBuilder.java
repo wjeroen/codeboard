@@ -85,6 +85,22 @@ public class KeyboardLayoutBuilder {
         return this.addKey(label, 0).withOutputText(label);
     }
 
+    /** Adds an empty spacer that reserves {@code size} units of row width but renders no
+     *  key (no view, no touch). Use it to inset a row, like a stock Android home row. */
+    public KeyboardLayoutBuilder addGap(float size)
+    {
+        if (currentRow == null){
+            newRow();
+        }
+        currentKey = new KeyInfo();
+        currentKey.label = "";
+        currentKey.code = 0;
+        currentKey.size = size;
+        currentKey.isSpacer = true;
+        currentRow.addKey(currentKey);
+        return this;
+    }
+
     public KeyboardLayoutBuilder asRepeatable(boolean repeat){
         currentKey.isRepeatable = repeat;
         return this;
@@ -161,8 +177,19 @@ public class KeyboardLayoutBuilder {
     }
 
     public KeyboardLayoutBuilder addShiftKey(){
-        return addKey("Shft", 16).asModifier()
-            .onShiftShow("SHFT").withSize(1.5f);
+        // Up-arrow icon (Gboard-style) instead of "Shft" text, so it can match the backspace
+        // key's width for a symmetric bottom letter row.
+        return addKey(context.getDrawable(R.drawable.ic_keyboard_arrow_up_24dp), 16)
+            .asModifier().withSize(1.5f);
+    }
+
+    /** For split keyboards: insert a central gap at the midpoint of the current row's keys (no-op
+     *  outside 2..maxKeys keys). Used to split symbol/custom rows that have no manual split. */
+    public KeyboardLayoutBuilder splitCurrentRow(float gap, int maxKeys){
+        if (currentRow != null){
+            currentRow.insertMidpointGap(gap, maxKeys);
+        }
+        return this;
     }
 
     public KeyboardLayoutBuilder addBackspaceKey(){
@@ -171,5 +198,30 @@ public class KeyboardLayoutBuilder {
 
     public KeyboardLayoutBuilder addEnterKey(){
         return addKey(context.getDrawable(R.drawable.ic_keyboard_return_24dp), -4).withSize(1.5f);
+    }
+
+    // --- Gboard-style long-press popups ---------------------------------------
+
+    private void setPopup(int columns, String defaultChar, String[] chars){
+        currentKey.popupChars = chars;
+        currentKey.popupColumns = columns;
+        int idx = 0;
+        for (int i = 0; i < chars.length; i++){
+            if (chars[i].equals(defaultChar)){ idx = i; break; }
+        }
+        currentKey.popupDefaultIndex = idx;
+    }
+
+    /** Letter keys: sets the popup and also shows the default char as the corner symbol. */
+    public KeyboardLayoutBuilder withPopup(int columns, String defaultChar, String... chars){
+        setPopup(columns, defaultChar, chars);
+        currentKey.cornerLabel = defaultChar;
+        return this;
+    }
+
+    /** Punctuation keys (comma/period): a popup but no corner symbol. */
+    public KeyboardLayoutBuilder withPopupNoCorner(int columns, String defaultChar, String... chars){
+        setPopup(columns, defaultChar, chars);
+        return this;
     }
 }

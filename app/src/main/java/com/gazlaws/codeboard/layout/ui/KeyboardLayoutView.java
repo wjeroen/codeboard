@@ -56,6 +56,12 @@ public class KeyboardLayoutView extends ViewGroup {
         }
     }
 
+    public void applyCapsLock(boolean locked){
+        for (KeyboardButtonView button : getKeyboardButtons()){
+            button.applyCapsLock(locked);
+        }
+    }
+
     private Collection<KeyboardButtonView> getKeyboardButtons(){
         int childCount = this.getChildCount();
         ArrayList<KeyboardButtonView> list = new ArrayList<>(childCount);

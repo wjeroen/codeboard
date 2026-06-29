@@ -51,4 +51,31 @@ public class KeyInfo {
      * Drawable is shown on the keyboard
      */
     public Drawable icon;
+
+    /**
+     * Small secondary symbol drawn in the top-right corner (Gboard-style)
+     */
+    public String cornerLabel;
+
+    /**
+     * Long-press popup alternates, in on-screen order (top-left to bottom-right).
+     * Null or empty means the key has no long-press popup.
+     */
+    public String[] popupChars;
+
+    /**
+     * Index in popupChars selected when the finger lifts without sliding
+     */
+    public int popupDefaultIndex;
+
+    /**
+     * Number of columns the popup is laid out in
+     */
+    public int popupColumns;
+
+    /**
+     * Spacer/gap: reserves horizontal space in its row but renders no key (no view, no
+     * touch target). Used to inset a row, e.g. half-key gaps on the ends of the home row.
+     */
+    public boolean isSpacer;
 }

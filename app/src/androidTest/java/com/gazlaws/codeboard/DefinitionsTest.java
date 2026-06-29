@@ -51,7 +51,7 @@ public class DefinitionsTest {
         Context appContext = ApplicationProvider.getApplicationContext();
         Definitions definitions = new Definitions(appContext);
         KeyboardLayoutBuilder builder = builder();
-        definitions.addQwertzRows(builder);
+        definitions.addQwertzRows(builder, 0f); // 0 = not split
         validate(builder);
     }
 
@@ -60,7 +60,7 @@ public class DefinitionsTest {
         Context appContext = ApplicationProvider.getApplicationContext();
         Definitions definitions = new Definitions(appContext);
         KeyboardLayoutBuilder builder = builder();
-        definitions.addAzertyRows(builder);
+        definitions.addAzertyRows(builder, 0f); // 0 = not split
         validate(builder);
     }
 
@@ -78,8 +78,9 @@ public class DefinitionsTest {
         for(Key key : builder.build()){
             assertNotNull(key.info);
             assertNotNull(key.box);
-            // must have either code or outputText set
-            assertTrue(key.info.code != 0 || key.info.outputText != null);
+            // a real key must have a code or output text; spacer gaps (home-row insets, split
+            // gaps) legitimately have neither
+            assertTrue(key.info.isSpacer || key.info.code != 0 || key.info.outputText != null);
         }
     }
 

@@ -6,18 +6,55 @@ android {
     buildToolsVersion '34.0.0'
 
     defaultConfig {
-        applicationId "com.gazlaws.codeboard"
+        // Fork ID: different from the original (com.gazlaws.codeboard) so this app
+        // installs alongside the Play Store CodeBoard instead of replacing it.
+        applicationId "com.gazlaws.codeboard.fork"
         minSdkVersion 23
         targetSdk 35
         versionCode 23
         versionName "6.0.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        // Fixed debug signing, so every build is signed with the SAME key and a new
+        // APK installs over an older one without an uninstall. Three sources, in
+        // priority order:
+        //   1. CI secrets: GitHub Actions decodes a keystore and passes these env
+        //      vars (use this if you would rather keep the keystore out of the repo).
+        //   2. The committed debug.keystore at the repo root (standard debug creds).
+        //   3. Otherwise AGP's auto-generated debug keystore.
+        // A *debug* keystore is not sensitive (its credentials are public, by design).
+        // Never commit a *release* keystore. Use secrets for release signing.
+        debug {
+            def ksPath = System.getenv("DEBUG_KEYSTORE_PATH")
+            def ksPass = System.getenv("DEBUG_KEYSTORE_PASSWORD")
+            def repoKeystore = rootProject.file("debug.keystore")
+            if (ksPath != null && !ksPath.trim().isEmpty() && file(ksPath).exists()) {
+                storeFile file(ksPath)
+                storePassword ksPass
+                keyAlias System.getenv("DEBUG_KEY_ALIAS")
+                keyPassword System.getenv("DEBUG_KEY_PASSWORD")
+            } else if (repoKeystore.exists()) {
+                storeFile repoKeystore
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    compileOptions {
+        // Source files now contain accented and IPA literals; pin the encoding so the
+        // compiler reads them correctly regardless of the build machine's default.
+        encoding = 'UTF-8'
     }
     testOptions {
         unitTests.includeAndroidResources = true

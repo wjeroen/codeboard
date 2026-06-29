@@ -30,4 +30,14 @@
         <item>5</item>
         <item>6</item>
     </string-array>
+    <string-array name="SplitModes">
+        <item>Off</item>
+        <item>Auto (wide screens)</item>
+        <item>On</item>
+    </string-array>
+    <string-array name="SplitModeValues">
+        <item>off</item>
+        <item>auto</item>
+        <item>on</item>
+    </string-array>
 </resources>

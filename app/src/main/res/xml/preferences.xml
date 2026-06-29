@@ -39,15 +39,11 @@
             android:title="@string/keyboard_size"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            android:defaultValue="@integer/size_portrait"
+            android:defaultValue="@integer/size_landscape"
             android:imeOptions="flagNoExtractUi"
             android:key="size_landscape"
             android:title="@string/keyboard_size_landscape"
             app:useSimpleSummaryProvider="true" />
-        <SwitchPreferenceCompat
-            android:defaultValue="@bool/preview"
-            android:key="preview"
-            android:title="@string/preview" />
         <SwitchPreferenceCompat
             android:defaultValue="@bool/notification"
             android:title="Open keyboard using notification"
@@ -97,16 +93,17 @@
             android:key="layout"
             android:title="Set Keyboard Layout"
             app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/SplitModes"
+            android:entryValues="@array/SplitModeValues"
+            android:key="split_keyboard"
+            android:title="Split keyboard"
+            android:summary="Auto splits the keyboard into two halves on wide screens (tablets/foldables)" />
         <SwitchPreferenceCompat
             android:defaultValue="@bool/top_row_actions"
             android:key="top_row_actions"
             android:title="@string/top_row_actions" />
-        <EditTextPreference
-            android:defaultValue="@string/input_symbols_main"
-            android:imeOptions="flagNoExtractUi"
-            android:key="input_symbols_main"
-            android:title="Main keyboard [Top Row]:"
-            app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             android:defaultValue="@string/input_symbols_main_2"
             android:imeOptions="flagNoExtractUi"
@@ -211,19 +208,14 @@
             <intent
                 android:action="android.intent.action.VIEW"
                 android:targetClass="com.gazlaws.codeboard.IntroActivity"
-                android:targetPackage="com.gazlaws.codeboard" />
-        </Preference>
-        <Preference android:title="Rate on Google Play">
-            <intent
-                android:action="android.intent.action.VIEW"
-                android:data="market://details?id=com.gazlaws.codeboard" />
+                android:targetPackage="com.gazlaws.codeboard.fork" />
         </Preference>
         <Preference
             android:summary="@string/github_summary"
             android:title="Open on GitHub">
             <intent
                 android:action="android.intent.action.VIEW"
-                android:data="https://github.com/gazlaws-dev/codeboard" />
+                android:data="https://github.com/wjeroen/codeboard" />
         </Preference>
 
     </PreferenceCategory>
