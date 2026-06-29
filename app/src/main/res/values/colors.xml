@@ -6,5 +6,7 @@
     <color name="colorPrimary">#9C27B0</color>
     <color name="colorPrimaryDark">#7B1FA2</color>
     <color name="colorAccent">#FF4081</color>
-    <color name="ic_launcher_background">#3CE2D4</color>
+    <!-- Adaptive launcher-icon background. The teal (#3CE2D4) hue-shifted +113 deg to match the
+         purple Play Store icon (the same shift applied to every icon PNG). -->
+    <color name="ic_launcher_background">#BD3CE2</color>
 </resources>
