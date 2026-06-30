@@ -32,6 +32,29 @@ actually works (architecture, codebase map, build and install) is in the
       the default cell should sit (Gboard puts it nearest the key's screen position).
 
 ### Features to Implement
+
+> 🧭 **Roadmap note (2026-06-30):** the items below mostly hang off one foundation. Today the app
+> has two kinds of keys: typed-character keys (movable, set in Settings) and special action keys
+> (Esc/Tab/arrows/F-keys/SYM, hardcoded in `Definitions`). Making the editable rows able to hold
+> special keys (the "foundation" item) turns most of the button/page features into "register one
+> more button". Suggested order: foundation -> Settings button -> Emoji page -> AI reword/prompts.
+
+- [ ] **Fully customizable rows incl. special keys (the "foundation")** (medium-large). Today the
+      editable rows (`addCustomRow`) only accept plain characters; special keys are hardcoded. Goal:
+      let any customizable row hold special keys too, EXCEPT the letter rows, Shift/Ctrl, and the
+      bottom row (those stay fixed). MVP: a token syntax in the existing text fields (e.g.
+      `{esc} {tab} {<} {sym}`) plus an action-key registry mapping each token to its icon/label/code,
+      and handling new codes in `CodeBoardIME.onKey`. Deluxe (later): a visual row-builder UI.
+- [ ] **Buttons that ride on the foundation** (do after the foundation lands):
+      - **Settings button** that opens the app settings (trivial once tokens exist).
+      - **Emoji page** (a new page like SYM; study how DevEmperor/DictateKeyboard builds its emoji grid).
+      - **AI reword + an AI-prompts page** (copy DictateKeyboard's functionality but in our own UI:
+        send the selected text to an LLM with the user's own API key, paste back the result; plus a
+        page of preset prompt buttons). Pull the current Claude API details when building it.
+      - **Suggested-word button**: a SINGLE button (not a suggestion strip) showing the correction
+        from Android's spellcheck, so a tap fixes "wont"->"won't", "pottoes"->"potatoes".
+- [ ] **Apply the split stagger to QWERTZ / AZERTY / Dvorak** once QWERTY is confirmed good on a
+      device. QWERTY has the hand-tuned 0.4 inset; the others currently split without it.
 - [ ] **Feature E: clipboard history** (medium-large, not yet designed). Replace the
       current fixed setup (7 manually-set pins plus the single current clipboard) with a
       real, growing history of recently copied items you can scroll and paste from on the
@@ -53,6 +76,21 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Split-mode Gboard stagger + consistent centre gap** (2026-06-30): reworked how the split
+      keyboard reserves its central gap. The gap is now a fixed FRACTION of the keyboard width
+      reserved by the row builder (`KeyInfo.isSplitGap` + `KeyboardLayoutRowBuilder.buildSplit`),
+      with each side laid out independently. So the centre gap is now identical on every row
+      regardless of key count, which also fixes the long-standing annoyance where a custom 12-char
+      number row showed a narrower gap than the letter rows. On QWERTY the home (a..l) and bottom
+      (z..m) rows are inset by `splitEndSpacer` (0.4 of a key) while Shift/Backspace grow by the
+      same amount, so `s d f g` line up exactly over `z x c v` and `a..g` read slightly narrower
+      than `q..t`, mimicking Gboard. The gap still grows on wider screens (each half capped at 5
+      key-heights). QWERTZ uses the same split markers; AZERTY/Dvorak/custom/SYM rows get the
+      consistent gap via the midpoint split. **Needs on-device check** (compiled in CI only).
+- [x] **Configurable split side margin** (2026-06-30): the left/right margin in split mode is now a
+      "Split side margin (%)" setting (default 5, was a hardcoded 0.05). Normal mode stays
+      edge-to-edge. (`KeyboardPreferences.getSplitSideMargin`, `preferences.xml`,
+      `default_keyboard_preferences.xml`, `CodeBoardIME.onCreateInputView`.)
 - [x] **Purple app icon everywhere** (2026-06-29): applied the same +113 deg hue shift used on
       the purple Play Store icon to every in-APK icon (the 5-density adaptive foreground, the
       legacy `ic_launcher`/`ic_launcher_round` rasters, the notification/intro `icon_large`, and
@@ -98,6 +136,10 @@ actually works (architecture, codebase map, build and install) is in the
     (the "Main keyboard [Top Row]" setting and its `` `-= `` keys are gone). Each digit
     long-presses to its superscript (the default) plus Gboard's fractions, e.g. `1` →
     `½ … ⅒`, `2` → `⅖ ⅔`. Splits `1 2 3 4 5 | 6 7 8 9 0`. (`addGboardNumberRow`)
+    > ⚠️ **Later reverted (2026-06-30):** the top row is the editable "Main keyboard [Top Row]"
+    > again (default `` `1234567890-= ``), built by `addCustomRow`; the digit-fraction popups now
+    > attach to whatever digit lands in any custom row (`addDigitFractionPopup`). There is no
+    > `addGboardNumberRow`. The README's editable-top-row description is the current, correct one.
   - `` ` `` (backtick) rehomed onto the **comma** key as its corner symbol + hold-default,
     keeping the IPA stress marks as slide alternates. The **period** key now shows `,` as
     its corner symbol.
@@ -194,6 +236,9 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Future Ideas
+- [ ] **Floating keyboard** (low priority, far future): a movable/floating keyboard window like
+      DictateKeyboard. Android IMEs do not float easily (needs special window handling), so this is
+      a project on its own, not a quick button.
 - [ ] Credit the original author / upstream in the in-app About screen.
 - [ ] Pick a permanent name and app ID for the fork (currently the placeholder
       "CodeBoard Fork" and `com.gazlaws.codeboard.fork`).

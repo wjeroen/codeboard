@@ -100,6 +100,12 @@
             android:key="split_keyboard"
             android:title="Split keyboard"
             android:summary="Auto splits the keyboard into two halves on wide screens (tablets/foldables)" />
+        <EditTextPreference
+            android:defaultValue="@integer/split_side_margin"
+            android:imeOptions="flagNoExtractUi"
+            android:key="split_side_margin"
+            android:title="Split side margin (%)"
+            app:useSimpleSummaryProvider="true" />
         <SwitchPreferenceCompat
             android:defaultValue="@bool/top_row_actions"
             android:key="top_row_actions"

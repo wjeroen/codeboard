@@ -202,6 +202,23 @@ public class KeyboardPreferences {
         return safeRead("split_keyboard", "auto");
     }
 
+    /**
+     * Left/right margin applied only in split mode, as a fraction of the keyboard width per side.
+     * Stored as a whole-number percent (EditTextPreference), default 5 (= 0.05). Clamped to 0..25%
+     * so a typo can't push every key off-screen.
+     */
+    public float getSplitSideMargin() {
+        try {
+            int pct = Integer.parseInt(safeRead("split_side_margin",
+                    String.valueOf(res.getInteger(R.integer.split_side_margin))));
+            if (pct < 0) pct = 0;
+            if (pct > 25) pct = 25;
+            return pct / 100f;
+        } catch (Exception e) {
+            return 0.05f;
+        }
+    }
+
     public int getThemeIndex() {
         return Integer.parseInt(safeRead("theme", "0"));
     }

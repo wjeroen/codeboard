@@ -54,9 +54,12 @@ deciding whether to switch, this is what to expect:
   character).
 - **Number keys long-press to fractions** (Gboard-style): any digit on the editable top
   row holds for its superscript plus common fractions (e.g. `1` → `½ … ⅒`).
-- **Split keyboard** for wide screens (tablets/foldables), Off / Auto / On in settings
-  (Auto by default); splits the letters and symbol rows, and caps each half's width so the
-  keys stay near your thumbs instead of stretching on very wide screens.
+- **Split keyboard** for wide screens (tablets/foldables): Off / Auto / On in settings
+  (Auto by default). It splits the letter and symbol rows into two thumb-friendly halves with a
+  Gboard-style stagger (on QWERTY the `asdf`/`zxcv` rows are inset a little and Shift/Backspace
+  widen to match, so the columns line up). The centre gap is the same width on every row and grows
+  on very wide screens, where each half stops at 5 key-heights so the keys stay near your thumbs.
+  The left/right margin is adjustable (**Split side margin (%)**, default 5).
 - **Up-arrow Shift key** (matches the backspace width) with a clear **caps-lock**
   indicator (underlined arrow; double-tap or long-press to lock), and a symmetric
   bottom row (equal-width Ctrl and Enter, letter-width comma/period).
@@ -200,10 +203,12 @@ committed, always keep that in secrets.
   space long-press IME picker.
 - **Split keyboard:** Settings has an Off / Auto / On switch (Auto by default). Auto splits
   the keyboard into two halves on wide screens (>= 600dp, tablets/foldables). The letter rows
-  duplicate their inner key (e.g. G and V on QWERTY) so each thumb has one; the number,
-  symbol, and custom rows split down the middle. On very wide screens each half stops
-  growing once it reaches 5 key-heights wide and the central gap takes the extra space,
-  so the keys stay near your thumbs instead of stretching across the screen.
+  duplicate their inner key (e.g. G and V on QWERTY) so each thumb has one. The number,
+  symbol, and custom rows split down the middle. On QWERTY the home (`asdf`) and bottom (`zxcv`)
+  rows are inset slightly and Shift/Backspace widen by the same amount, so `s d f g` line up over
+  `z x c v` (a Gboard-style stagger). The central gap is identical on every row and, on very wide
+  screens, each half stops growing at 5 key-heights so the gap takes the extra space and the keys
+  stay near your thumbs. The left/right margin is set by **Split side margin (%)** (default 5).
 - **Hold an arrow key** to auto-repeat it.
 
 ---
@@ -304,7 +309,7 @@ Settings live in *Codeboard app → Settings*, backed by
 | **View Keyboard** | Open the IME picker; a scratch text field to test typing. |
 | **Features** | Key-press sound, vibration (+ length in ms), font size, keyboard size (portrait and landscape), key-press preview, notification shortcut. |
 | **Colour** | Theme picker, custom theme toggle with background/foreground color pickers, key borders, dynamic navigation-bar coloring. |
-| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off / Auto / On, Auto default)**, "top row actions" toggle, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth). The letter rows are fixed. |
+| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off / Auto / On, Auto default)**, **Split side margin (%)** (left/right margin in split mode, default 5), "top row actions" toggle, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth). The letter rows are fixed. |
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
@@ -341,10 +346,12 @@ Understanding these few facts explains most of the code:
    and the spacebar cursor drag (`handleSpaceCursorDrag`).
 2. **Geometry is normalized.** Keys are positioned with `Box` coordinates that
    are fractions from 0.0 to 1.0 of the keyboard's width and height. They are
-   converted to pixels in `KeyboardButtonView.layout()`. Because geometry is purely
-   relative, the split keyboard is just extra keys plus an `addGap` spacer in the
-   middle of each row (`Definitions.addGboardQwertyRows(builder, split)`); the gap is
-   a real "key" with no view (`isSpacer`, skipped by `KeyboardUiFactory`).
+   converted to pixels in `KeyboardButtonView.layout()`. A plain inset is just an
+   `addGap` spacer (a real "key" with no view, `isSpacer`, skipped by `KeyboardUiFactory`).
+   The split keyboard uses a dedicated central marker (`addSplitGap` / `KeyInfo.isSplitGap`): the
+   row builder reserves a fixed fraction of the width for the gap and lays out each half
+   independently (`KeyboardLayoutRowBuilder.buildSplit`), so the gap is identical on every row
+   regardless of key count and the two halves can use different key widths (the Gboard stagger).
 3. **Press preview, then long-press alternates.** Both are the same `PopupKeyboardView`
    in a non-touchable `PopupWindow` above the key. (a) The instant *preview* (character
    keys, `hasCharPreview()`): on press, a single bright cell showing just the pressed

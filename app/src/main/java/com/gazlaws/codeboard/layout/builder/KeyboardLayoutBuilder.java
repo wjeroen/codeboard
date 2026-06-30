@@ -101,6 +101,24 @@ public class KeyboardLayoutBuilder {
         return this;
     }
 
+    /** For split keyboards: a central gap that reserves a FIXED fraction of the row width (so the
+     *  gap is identical on every row, regardless of key count) and splits the row into independent
+     *  left/right halves. {@code fraction} is the gap width as a fraction of the row width. */
+    public KeyboardLayoutBuilder addSplitGap(float fraction)
+    {
+        if (currentRow == null){
+            newRow();
+        }
+        currentKey = new KeyInfo();
+        currentKey.label = "";
+        currentKey.code = 0;
+        currentKey.size = fraction;
+        currentKey.isSpacer = true;
+        currentKey.isSplitGap = true;
+        currentRow.addKey(currentKey);
+        return this;
+    }
+
     public KeyboardLayoutBuilder asRepeatable(boolean repeat){
         currentKey.isRepeatable = repeat;
         return this;
@@ -183,11 +201,12 @@ public class KeyboardLayoutBuilder {
             .asModifier().withSize(1.5f);
     }
 
-    /** For split keyboards: insert a central gap at the midpoint of the current row's keys (no-op
-     *  outside 2..maxKeys keys). Used to split symbol/custom rows that have no manual split. */
-    public KeyboardLayoutBuilder splitCurrentRow(float gap, int maxKeys){
+    /** For split keyboards: insert a central split marker at the midpoint of the current row's keys
+     *  (no-op outside 2..maxKeys keys). Used to split symbol/custom rows that have no manual split.
+     *  {@code gapFraction} is the gap width as a fraction of the row width (same on every row). */
+    public KeyboardLayoutBuilder splitCurrentRow(float gapFraction, int maxKeys){
         if (currentRow != null){
-            currentRow.insertMidpointGap(gap, maxKeys);
+            currentRow.insertMidpointGap(gapFraction, maxKeys);
         }
         return this;
     }

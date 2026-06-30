@@ -9,10 +9,11 @@ public class Definitions {
     private Context context;
     private static final int CODE_ESCAPE = -2;
     private static final int CODE_SYMBOLS = -1;
-    // Split mode is now signalled by the central-gap width (in key-widths) passed to each row
-    // method: splitGap <= 0 means "not split". The gap is computed per-build in CodeBoardIME so that
-    // each half of the keyboard is capped at 5 key-heights wide (the spacebar / gap absorbs the rest
-    // on very wide screens); see CodeBoardIME.computeSplitGap.
+    // Split mode is signalled by the central-gap FRACTION passed to each row method (splitGap <= 0
+    // means "not split"). The fraction is computed per-build in CodeBoardIME so that each half of
+    // the keyboard is capped at 5 key-heights wide (the gap absorbs the rest on very wide screens);
+    // see CodeBoardIME.computeSplitGapFraction. Rows reserve the gap as a fixed fraction of their
+    // width (KeyboardLayoutRowBuilder), so it stays identical across rows regardless of key count.
 
     public Definitions(Context current) {
         this.context = current;
@@ -186,7 +187,7 @@ public class Definitions {
         keyboard.newRow();
         addLetterKey(keyboard, 'q'); addLetterKey(keyboard, 'w'); addLetterKey(keyboard, 'e');
         addLetterKey(keyboard, 'r'); addLetterKey(keyboard, 't');
-        if (split) keyboard.addGap(splitGap);
+        if (split) keyboard.addSplitGap(splitGap);
         addLetterKey(keyboard, 'z'); addLetterKey(keyboard, 'u'); addLetterKey(keyboard, 'i');
         addLetterKey(keyboard, 'o'); addLetterKey(keyboard, 'p');
 
@@ -194,7 +195,7 @@ public class Definitions {
         if (!split) keyboard.addGap(0.5f);
         addLetterKey(keyboard, 'a'); addLetterKey(keyboard, 's'); addLetterKey(keyboard, 'd');
         addLetterKey(keyboard, 'f'); addLetterKey(keyboard, 'g');
-        if (split) { keyboard.addGap(splitGap); addLetterKey(keyboard, 'g'); }
+        if (split) { keyboard.addSplitGap(splitGap); addLetterKey(keyboard, 'g'); }
         addLetterKey(keyboard, 'h'); addLetterKey(keyboard, 'j'); addLetterKey(keyboard, 'k');
         addLetterKey(keyboard, 'l');
         if (!split) keyboard.addGap(0.5f);
@@ -202,7 +203,7 @@ public class Definitions {
         keyboard.newRow().addShiftKey().withSize(shiftSize);
         addLetterKey(keyboard, 'y'); addLetterKey(keyboard, 'x'); addLetterKey(keyboard, 'c');
         addLetterKey(keyboard, 'v');
-        if (split) { keyboard.addGap(splitGap); addLetterKey(keyboard, 'v'); }
+        if (split) { keyboard.addSplitGap(splitGap); addLetterKey(keyboard, 'v'); }
         addLetterKey(keyboard, 'b'); addLetterKey(keyboard, 'n'); addLetterKey(keyboard, 'm');
         keyboard.addBackspaceKey().withSize(shiftSize);
     }
@@ -334,11 +335,15 @@ public class Definitions {
     // (addGboardBottomRow) is added separately and never splits.
     public static void addGboardQwertyRows(KeyboardLayoutBuilder keyboard, float splitGap) {
         boolean split = splitGap > 0;
-        float centerGap = splitGap; // width of the central split gap, in key-widths
-        // Shift and Backspace are equal width and sized so the z..m letters stay letter-width,
-        // matching the home row total (10 normal, 10 + the central gap when split). Up-arrow icon
-        // on Shift (addShiftKey).
-        float shiftSize = split ? 1.0f : 1.5f;
+        float centerGap = splitGap; // central split gap as a FRACTION of the row width (see addSplitGap)
+        // Gboard split stagger: the home (a..l) and bottom (z..m) rows are inset at each outer end by
+        // a small spacer, and Shift/Backspace grow by that SAME amount. Both rows then have an
+        // identical half built from "5 + inset" units, so s/d/f/g sit exactly above z/x/c/v and
+        // g/h/j/k above v/b/n/m. The top row (q..p) has no inset, so its keys read a touch wider than
+        // the home row, the natural "asdfg slightly narrower than qwert" Gboard look. One constant
+        // drives both the inset and the Shift/Backspace gain so they always match.
+        float splitEndSpacer = 0.4f; // ~2/5 of a key; raise for a narrower home row, lower for wider
+        float shiftSize = split ? (1.0f + splitEndSpacer) : 1.5f;
 
         // Row 1: q w e r t | y u i o p
         keyboard.newRow()
@@ -347,27 +352,29 @@ public class Definitions {
                 .addKey('e').onShiftUppercase().withPopup(6, "|", "ę","ë","ē","ė","ə","ɛ̃", "è","|","é","ê","ɜ","ɛ")
                 .addKey('r').onShiftUppercase().withPopup(5, "=", "=","ʁ","ɹ","ɾ","ʀ")
                 .addKey('t').onShiftUppercase().withPopup(2, "[", "[", "θ");
-        if (split) keyboard.addGap(centerGap);
+        if (split) keyboard.addSplitGap(centerGap);
         keyboard.addKey('y').onShiftUppercase().withPopup(5, "]", "ʏ","ij","]","ÿ","ý")
                 .addKey('u').onShiftUppercase().withPopup(4, "<", "ũ","ù","ū","ʊ", "û","<","ú","ü")
                 .addKey('i').onShiftUppercase().withPopup(5, ">", "ɪ","ij","į","ì","ĩ", "ī","ï","î",">","í")
                 .addKey('o').onShiftUppercase().withPopup(6, "{", "ɔ̃","œ̃","õ","ō","ø","ò", "ɔ","œ","ö","ô","ó","{")
                 .addKey('p').onShiftUppercase().withPopup(1, "}", "}");
 
-        // Row 2: a s d f g | g h j k l   (G duplicated when split; small end gaps otherwise)
+        // Row 2: a s d f g | g h j k l   (G duplicated when split). Outer end spacers inset the row:
+        // 0.5 in normal mode (classic stagger), the split inset when split (so a..l read narrower
+        // than q..p and line up over z..m).
         keyboard.newRow();
-        if (!split) keyboard.addGap(0.5f);
+        keyboard.addGap(split ? splitEndSpacer : 0.5f);
         keyboard.addKey('a').onShiftUppercase().withPopup(6, "@", "æ","ã","å","ā","ɒ","ɑ", "@","à","á","â","ä","ɑ̃")
                 .addKey('s').onShiftUppercase().withPopup(3, "#", "#","ß","ʃ")
                 .addKey('d').onShiftUppercase().withPopup(6, "€", "€","$","£","¥","¢","ð")
                 .addKey('f').onShiftUppercase().withPopup(1, "-", "-")
                 .addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ");
-        if (split) keyboard.addGap(centerGap).addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ");
+        if (split) keyboard.addSplitGap(centerGap).addKey('g').onShiftUppercase().withPopup(2, "&", "&","ɣ");
         keyboard.addKey('h').onShiftUppercase().withPopup(2, "-", "-","ɦ")
                 .addKey('j').onShiftUppercase().withPopup(2, "+", "+","j́")
                 .addKey('k').onShiftUppercase().withPopup(1, "(", "(")
                 .addKey('l').onShiftUppercase().withPopup(1, ")", ")");
-        if (!split) keyboard.addGap(0.5f);
+        keyboard.addGap(split ? splitEndSpacer : 0.5f);
 
         // Row 3: shift z x c v | v b n m backspace   (V duplicated when split)
         keyboard.newRow()
@@ -376,7 +383,7 @@ public class Definitions {
                 .addKey('x').onShiftUppercase().withPopup(1, "\"", "\"")
                 .addKey('c').onShiftUppercase().withPopup(4, "'", "ć","'","ç","č")
                 .addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
-        if (split) keyboard.addGap(centerGap).addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
+        if (split) keyboard.addSplitGap(centerGap).addKey('v').onShiftUppercase().withPopup(2, ":", ":","ʌ");
         keyboard.addKey('b').onShiftUppercase().withPopup(1, ";", ";")
                 .addKey('n').onShiftUppercase().withPopup(5, "!", "ŋ","ɲ","ń","!","ñ")
                 .addKey('m').onShiftUppercase().withPopup(1, "?", "?")
@@ -387,11 +394,12 @@ public class Definitions {
     // Period carries the punctuation popup; comma carries the IPA stress/length marks.
     public void addGboardBottomRow(KeyboardLayoutBuilder keyboard, float splitGap) {
         // Symmetric bottom row: Ctrl and Enter are equal width (1.25), comma and period are letter
-        // width (1.0), the spacebar takes the rest. The total matches the letter rows (10 normal,
-        // 10 + the central gap split), so comma/period stay letter-width in both modes. Comma's
-        // corner/hold-default is the backtick (rehomed from the old number row), with the IPA marks
-        // kept as slide alternates; period shows its comma hold-default as a corner symbol.
-        float rowTotal = splitGap > 0 ? (10f + splitGap) : 10f;
+        // width (1.0), the spacebar takes the rest. The bottom row is NOT split; to keep comma/period
+        // the same width as a top-row letter we match the letter-row scale. A top-row letter is
+        // (1 - splitGap)/10 of the width (splitGap is the central-gap fraction), so rowTotal here is
+        // 10 / (1 - splitGap). Comma's corner/hold-default is the backtick (rehomed from the old
+        // number row), with the IPA marks kept as slide alternates; period shows its comma default.
+        float rowTotal = splitGap > 0 ? (10f / (1f - splitGap)) : 10f;
         float ctrlEnterSize = 1.25f;
         float spaceSize = rowTotal - 2f * ctrlEnterSize - 2f; // Ctrl+Enter (2.5) + comma+period (2)
         keyboard.newRow()

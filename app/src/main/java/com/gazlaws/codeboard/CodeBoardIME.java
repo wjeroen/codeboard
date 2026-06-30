@@ -80,8 +80,9 @@ public class CodeBoardIME extends InputMethodService
     private boolean longPressedSpaceButton = false;
     private int mSpaceCursorTarget = -1; // local caret target during a spacebar drag; -1 = not dragging
     private int mSpaceCursorMax = 0;     // cached text length (max caret position) for the current drag
-    // Minimum split centre-gap (key-widths) on screens too narrow to hit the max-half-width cap.
-    private static final float MIN_SPLIT_GAP = 2.5f;
+    // Minimum split centre-gap, as a fraction of the keyboard width, on screens too narrow to hit
+    // the max-half-width cap. 0.2 matches the old key-width minimum (2.5 of a ~12.5-unit letter row).
+    private static final float MIN_SPLIT_GAP_FRACTION = 0.2f;
     // Two Shift taps within this window (ms) toggle caps lock, like Gboard.
     private static final long SHIFT_DOUBLE_TAP_MS = 300;
     private long mLastShiftTapMs = 0;
@@ -642,13 +643,14 @@ public class CodeBoardIME extends InputMethodService
 
             // Left/right margins only in split mode (a Gboard-style thumb gap on wide screens);
             // normal mode is edge-to-edge. With the max-half-width cap the keys stay at their max
-            // size, so this just trades gap width for margin. Full height, nothing top/bottom. Tunable.
-            float sidePadding = split ? 0.05f : 0f;
+            // size, so this just trades gap width for margin. Full height, nothing top/bottom.
+            // Configurable via the "Split side margin (%)" setting (default 5%).
+            float sidePadding = split ? sharedPreferences.getSplitSideMargin() : 0f;
             builder.setBox(Box.create(sidePadding, 0, 1 - 2 * sidePadding, 1));
 
             // In split mode each half is capped at 5 key-heights wide (so it stays near the thumb on
-            // very wide screens); the central gap absorbs the leftover width. computeSplitGap needs
-            // the row count to know the key height, so count the rows this page will build.
+            // very wide screens); the central gap absorbs the leftover width. computeSplitGapFraction
+            // needs the row count to know the key height, so count the rows this page will build.
             int numRows;
             if (mKeyboardState == R.integer.keyboard_sym) {
                 numRows = 1; // action row
@@ -662,7 +664,7 @@ public class CodeBoardIME extends InputMethodService
                 if (!mCustomSymbolsMain.isEmpty()) numRows++;  // customizable top row
                 if (!mCustomSymbolsMain2.isEmpty()) numRows++;
             }
-            float splitGap = split ? computeSplitGap(numRows, sidePadding, mSize, sizeLandscape) : 0f;
+            float splitGap = split ? computeSplitGapFraction(numRows, sidePadding, mSize, sizeLandscape) : 0f;
 
             if (mToprow) {
                 definitions.addCopyPasteRow(builder);
@@ -788,23 +790,25 @@ public class CodeBoardIME extends InputMethodService
     }
 
     /**
-     * Central split-gap width (in key-widths) so that each half of a split keyboard is at most 5
-     * key-heights wide (one key height = keyboard height / rows). On a wide screen the gap grows to
-     * eat the leftover width, keeping the halves near the thumbs; on a narrow screen it falls back
-     * to {@link #MIN_SPLIT_GAP}. The "10" is the two halves of 5 keys each.
+     * Central split-gap as a FRACTION of the keyboard width, so that each half of a split keyboard
+     * is at most 5 key-heights wide (one key height = keyboard height / rows). On a wide screen the
+     * gap grows to eat the leftover width, keeping the halves near the thumbs; on a narrow screen it
+     * falls back to {@link #MIN_SPLIT_GAP_FRACTION}. Returning a fraction (not key-widths) lets every
+     * row reserve the same gap regardless of how many keys it holds, so the gap lines up across rows.
+     * The "10" is the two halves of 5 key-heights each: gapPx = boxWidth - 10*keyHeight.
      */
-    private float computeSplitGap(int numRows, float sidePadding, int portraitPct, int landscapePct) {
+    private float computeSplitGapFraction(int numRows, float sidePadding, int portraitPct, int landscapePct) {
         DisplayMetrics dm = getResources().getDisplayMetrics();
         boolean landscape = dm.widthPixels > dm.heightPixels;
         float fraction = (landscape ? landscapePct : portraitPct) / 100f;
         float keyboardHeightPx = dm.heightPixels * fraction;
         float keyHeightPx = keyboardHeightPx / Math.max(1, numRows);
-        if (keyHeightPx <= 0) {
-            return MIN_SPLIT_GAP;
-        }
         float boxWidthPx = dm.widthPixels * (1f - 2f * sidePadding);
-        float gap = boxWidthPx / keyHeightPx - 10f;
-        return Math.max(MIN_SPLIT_GAP, gap);
+        if (keyHeightPx <= 0 || boxWidthPx <= 0) {
+            return MIN_SPLIT_GAP_FRACTION;
+        }
+        float gapFraction = (boxWidthPx - 10f * keyHeightPx) / boxWidthPx;
+        return Math.max(MIN_SPLIT_GAP_FRACTION, gapFraction);
     }
 
     private void clearLongPressTimer() {
