@@ -54,7 +54,9 @@ actually works (architecture, codebase map, build and install) is in the
       - **Suggested-word button**: a SINGLE button (not a suggestion strip) showing the correction
         from Android's spellcheck, so a tap fixes "wont"->"won't", "pottoes"->"potatoes".
 - [ ] **Apply the split stagger to QWERTZ / AZERTY / Dvorak** once QWERTY is confirmed good on a
-      device. QWERTY has the hand-tuned 0.4 inset; the others currently split without it.
+      device. QWERTY has the hand-tuned 0.4 inset; the others currently split without it. Doing this
+      also brings their bottom row (Ctrl/comma/period/Enter) into line, since the shared bottom row
+      is now sized to the staggered Shift/Backspace width.
 - [ ] **Feature E: clipboard history** (medium-large, not yet designed). Replace the
       current fixed setup (7 manually-set pins plus the single current clipboard) with a
       real, growing history of recently copied items you can scroll and paste from on the
@@ -76,6 +78,15 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Split-mode bottom-row + SYM-row alignment** (2026-06-30): with the QWERTY stagger,
+      Shift/Backspace are 1.4 wide, so the shared bottom row (Ctrl/comma/space/period/Enter) and the
+      SYM page's F-key row had drifted out of line. Made `0.4` a single `SPLIT_END_SPACER` constant
+      and sized both rows from it. Bottom row: Ctrl/Enter now match Shift/Backspace and comma/period
+      are letter-width, so Ctrl sits under Shift, comma under z, period under m, Enter under
+      Backspace (both modes; the non-split Ctrl/Enter went 1.25 -> 1.5). SYM page: Shift/F1-F4/Backspace
+      line up with the letter page's Shift/z-v/Backspace, and F5-F7 widen to fill the right half.
+      Confirmed on device. Caveat: AZERTY/Dvorak/QWERTZ are not staggered yet, so their bottom row
+      will not line up until the stagger is applied to them (see Features to Implement).
 - [x] **Split-mode Gboard stagger + consistent centre gap** (2026-06-30): reworked how the split
       keyboard reserves its central gap. The gap is now a fixed FRACTION of the keyboard width
       reserved by the row builder (`KeyInfo.isSplitGap` + `KeyboardLayoutRowBuilder.buildSplit`),

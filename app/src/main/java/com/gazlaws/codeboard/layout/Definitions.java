@@ -9,6 +9,10 @@ public class Definitions {
     private Context context;
     private static final int CODE_ESCAPE = -2;
     private static final int CODE_SYMBOLS = -1;
+    // Split-mode stagger inset: the home/bottom letter rows are inset by this many key-widths at
+    // each outer end, and Shift/Backspace (plus the bottom row's Ctrl/Enter) grow by the same
+    // amount so the columns line up. About 2/5 of a key, per the Gboard reference. One knob to tune.
+    private static final float SPLIT_END_SPACER = 0.4f;
     // Split mode is signalled by the central-gap FRACTION passed to each row method (splitGap <= 0
     // means "not split"). The fraction is computed per-build in CodeBoardIME so that each half of
     // the keyboard is capped at 5 key-heights wide (the gap absorbs the rest on very wide screens);
@@ -269,16 +273,23 @@ public class Definitions {
                 .addKey("PgUp", -22)
                 .addKey("PgDn", -23);
         if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
+        // Row 2 mirrors the regular bottom letter row so Shift, F1-F4 and Backspace line up with
+        // Shift, z-v and Backspace when you switch pages. In split, Shift/Backspace take the stagger
+        // width and F5-F7 widen (there are only three of them between the gap and Backspace) so the
+        // right half matches and Backspace stays letter-row width.
+        boolean split = splitGap > 0;
+        float symEndKey = split ? (1.0f + SPLIT_END_SPACER) : 1.5f;
+        float symFKeyRight = split ? (4f / 3f) : 1.0f; // (5 + spacer - (1 + spacer)) / 3; the spacer cancels
         keyboard.newRow()
-                .addShiftKey()
+                .addShiftKey().withSize(symEndKey)
                 .addKey("F1", -6)
                 .addKey("F2", -7)
                 .addKey("F3", -8)
                 .addKey("F4", -9)
-                .addKey("F5", -10)
-                .addKey("F6", -11)
-                .addKey("F7", -12)
-                .addBackspaceKey();
+                .addKey("F5", -10).withSize(symFKeyRight)
+                .addKey("F6", -11).withSize(symFKeyRight)
+                .addKey("F7", -12).withSize(symFKeyRight)
+                .addBackspaceKey().withSize(symEndKey);
         if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
         // The F8-F12 row carries the spacebar, so it is left whole (splitting around the bar
         // looks odd); this is the "best effort" SYM-page split noted in TODO.
@@ -342,7 +353,7 @@ public class Definitions {
         // g/h/j/k above v/b/n/m. The top row (q..p) has no inset, so its keys read a touch wider than
         // the home row, the natural "asdfg slightly narrower than qwert" Gboard look. One constant
         // drives both the inset and the Shift/Backspace gain so they always match.
-        float splitEndSpacer = 0.4f; // ~2/5 of a key; raise for a narrower home row, lower for wider
+        float splitEndSpacer = SPLIT_END_SPACER; // tune via the SPLIT_END_SPACER class constant
         float shiftSize = split ? (1.0f + splitEndSpacer) : 1.5f;
 
         // Row 1: q w e r t | y u i o p
@@ -393,15 +404,18 @@ public class Definitions {
     // Bottom row for the Gboard QWERTY: Ctrl, comma, space, period, enter.
     // Period carries the punctuation popup; comma carries the IPA stress/length marks.
     public void addGboardBottomRow(KeyboardLayoutBuilder keyboard, float splitGap) {
-        // Symmetric bottom row: Ctrl and Enter are equal width (1.25), comma and period are letter
-        // width (1.0), the spacebar takes the rest. The bottom row is NOT split; to keep comma/period
-        // the same width as a top-row letter we match the letter-row scale. A top-row letter is
-        // (1 - splitGap)/10 of the width (splitGap is the central-gap fraction), so rowTotal here is
-        // 10 / (1 - splitGap). Comma's corner/hold-default is the backtick (rehomed from the old
-        // number row), with the IPA marks kept as slide alternates; period shows its comma default.
-        float rowTotal = splitGap > 0 ? (10f / (1f - splitGap)) : 10f;
-        float ctrlEnterSize = 1.25f;
-        float spaceSize = rowTotal - 2f * ctrlEnterSize - 2f; // Ctrl+Enter (2.5) + comma+period (2)
+        // Bottom row laid out to line up under the bottom letter row: Ctrl sits under Shift, comma
+        // under z, period under m, Enter under Backspace. So Ctrl/Enter take the Shift/Backspace
+        // width (1 + SPLIT_END_SPACER in split, 1.5 normally) and comma/period stay letter-width
+        // (1.0); the spacebar takes the rest. The row is NOT split, so to keep those widths matching
+        // the (split) letter rows we scale to their total: the letter rows hold 2*(5 + SPLIT_END_SPACER)
+        // key-units across (1 - gap) of the width, so rowTotal = that / (1 - gap); normally it is 10.
+        // Comma's corner/hold-default is the backtick (rehomed from the old number row), IPA marks as
+        // slide alternates; period shows its comma default.
+        boolean split = splitGap > 0;
+        float ctrlEnterSize = split ? (1.0f + SPLIT_END_SPACER) : 1.5f;
+        float rowTotal = split ? (2f * (5f + SPLIT_END_SPACER) / (1f - splitGap)) : 10f;
+        float spaceSize = rowTotal - 2f * ctrlEnterSize - 2f; // minus Ctrl+Enter and comma+period
         keyboard.newRow()
                 .addKey("Ctrl", 17).asModifier().onCtrlShow("CTRL").withSize(ctrlEnterSize)
                 .addKey(',').withPopup(4, "`", "`","ː","ˈ","ˌ")
