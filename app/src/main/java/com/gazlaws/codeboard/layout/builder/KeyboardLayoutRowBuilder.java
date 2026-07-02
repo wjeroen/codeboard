@@ -4,6 +4,7 @@ import com.gazlaws.codeboard.layout.Box;
 import com.gazlaws.codeboard.layout.Key;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class KeyboardLayoutRowBuilder {
 
@@ -16,25 +17,69 @@ public class KeyboardLayoutRowBuilder {
         if (keys.size() == 0){
             throw new KeyboardLayoutException("Row cannot be built without any keys");
         }
-        float availableWidth = box.width - gap * (keys.size() - 1);
-        float availableHeight = box.height;
+        // A split row carries one central split marker (isSplitGap). It reserves a FIXED gap (a
+        // fraction of the row width, so the gap is identical on every row no matter how many keys
+        // the row has) and lays out the keys on each side independently to fill their half. Without
+        // a marker the row is distributed across the full width as usual.
+        int splitIndex = -1;
+        for (int i = 0; i < keys.size(); i++) {
+            if (keys.get(i).isSplitGap) {
+                splitIndex = i;
+                break;
+            }
+        }
+        if (splitIndex >= 0) {
+            return buildSplit(splitIndex);
+        }
+        return buildRange(keys, box);
+    }
+
+    /** Lays out a list of keys across a box, sharing the width in proportion to each key's size
+     *  (the classic, non-split behaviour). */
+    private ArrayList<Key> buildRange(List<KeyInfo> rowKeys, Box rowBox) throws KeyboardLayoutException {
+        int count = rowKeys.size();
+        float availableWidth = rowBox.width - gap * Math.max(0, count - 1);
+        float availableHeight = rowBox.height;
         if (availableWidth <= 0){
             throw new KeyboardLayoutException("Not enough space to fit keys in row");
         }
         float totalRequestedSize = 0;
-        for (KeyInfo info : keys){
+        for (KeyInfo info : rowKeys){
             totalRequestedSize += info.size;
         }
-        float cursorX = box.x;
-        float cursorY = box.y;
+        float cursorX = rowBox.x;
+        float cursorY = rowBox.y;
         ArrayList<Key> result = new ArrayList<>();
-        for (KeyInfo info : keys){
+        for (KeyInfo info : rowKeys){
             float width = availableWidth/totalRequestedSize*info.size;
             float height = availableHeight;
-            Box box = Box.create(cursorX, cursorY, width, height);
-            cursorX += box.width + gap;
-            Key key = buildKeyFromBlueprint(info, box);
-            result.add(key);
+            Box keyBox = Box.create(cursorX, cursorY, width, height);
+            cursorX += keyBox.width + gap;
+            result.add(buildKeyFromBlueprint(info, keyBox));
+        }
+        return result;
+    }
+
+    /** Reserves a fixed central gap (a fraction of the row width, carried on the split marker's
+     *  size) and fills the left and right halves independently. Equal half widths plus the same gap
+     *  fraction on every row are what keep the centre gap and the column alignment consistent, even
+     *  when rows hold different numbers of keys. */
+    private ArrayList<Key> buildSplit(int splitIndex) throws KeyboardLayoutException {
+        KeyInfo marker = keys.get(splitIndex);
+        float gapFraction = marker.size;
+        if (gapFraction < 0) gapFraction = 0;
+        if (gapFraction > 0.8f) gapFraction = 0.8f;
+        float gapWidth = box.width * gapFraction;
+        float halfWidth = (box.width - gapWidth) / 2f;
+        ArrayList<Key> result = new ArrayList<>();
+        List<KeyInfo> left = keys.subList(0, splitIndex);
+        List<KeyInfo> right = keys.subList(splitIndex + 1, keys.size());
+        if (!left.isEmpty()) {
+            result.addAll(buildRange(left, Box.create(box.x, box.y, halfWidth, box.height)));
+        }
+        if (!right.isEmpty()) {
+            result.addAll(buildRange(right,
+                    Box.create(box.x + halfWidth + gapWidth, box.y, halfWidth, box.height)));
         }
         return result;
     }
@@ -44,9 +89,10 @@ public class KeyboardLayoutRowBuilder {
         return this;
     }
 
-    /** Inserts a central split gap at the midpoint of this row's keys. The left half gets the
-     *  extra key when the count is odd. No-op outside 2..maxKeys keys. */
-    public void insertMidpointGap(float gap, int maxKeys) {
+    /** Inserts a central split marker at the midpoint of this row's keys (the left half gets the
+     *  extra key when the count is odd). No-op outside 2..maxKeys keys. {@code gapFraction} is the
+     *  fraction of the row width to reserve for the central gap (see {@link KeyInfo#isSplitGap}). */
+    public void insertMidpointGap(float gapFraction, int maxKeys) {
         int n = keys.size();
         if (n < 2 || n > maxKeys) {
             return;
@@ -54,8 +100,9 @@ public class KeyboardLayoutRowBuilder {
         KeyInfo spacer = new KeyInfo();
         spacer.label = "";
         spacer.code = 0;
-        spacer.size = gap;
+        spacer.size = gapFraction;
         spacer.isSpacer = true;
+        spacer.isSplitGap = true;
         keys.add((n + 1) / 2, spacer);
     }
 

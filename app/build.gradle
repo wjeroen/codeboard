@@ -11,8 +11,8 @@ android {
         applicationId "com.gazlaws.codeboard.fork"
         minSdkVersion 23
         targetSdk 35
-        versionCode 23
-        versionName "6.0.3"
+        versionCode 24
+        versionName "6.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {

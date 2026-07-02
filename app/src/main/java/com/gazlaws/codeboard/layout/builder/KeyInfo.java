@@ -78,4 +78,13 @@ public class KeyInfo {
      * touch target). Used to inset a row, e.g. half-key gaps on the ends of the home row.
      */
     public boolean isSpacer;
+
+    /**
+     * Central split marker for a split keyboard. When set, this spacer is NOT distributed like a
+     * normal key: the row builder reserves a fixed gap of {@code size} (interpreted as a fraction
+     * of the row width, so the gap is identical on every row no matter how many keys the row holds)
+     * and lays out the keys before/after it into the two halves independently. This is what keeps
+     * the centre gap consistent across rows and lets the two sides use different key widths.
+     */
+    public boolean isSplitGap;
 }

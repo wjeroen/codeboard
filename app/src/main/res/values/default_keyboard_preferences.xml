@@ -13,11 +13,16 @@
     <integer name="vibrate_length">1</integer>
     <integer name="size_portrait">35</integer>
     <integer name="size_landscape">40</integer>
+    <integer name="split_side_margin">5</integer>
+    <integer name="scroll_lines">3</integer>
+    <integer name="ghost_opacity">25</integer>
     <integer name="bg_color">0xff263238</integer>
     <integer name="fg_color">0xffffffff</integer>
     <integer name="font_size">25</integer>
     <string name="input_symbols_main">`1234567890-=</string>
-    <string name="input_symbols_main_2" />
+    <!-- Second main row now demos the new special-key tokens by default; clear the
+         "Main keyboard [Second Row]" setting to hide the row again. -->
+    <string name="input_symbols_main_2">{emoji}{scrollup}{scrolldown}{ghost}{settings}</string>
     <string name="input_symbols_main_bottom">\?,\":;.\'</string>
     <string name="input_symbols_sym"><![CDATA[~!@#$%^&*()_+]]></string>
     <string name="input_symbols_sym_2"><![CDATA[\\|/[]{}<>:]]></string>
