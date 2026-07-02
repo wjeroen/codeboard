@@ -33,26 +33,17 @@ actually works (architecture, codebase map, build and install) is in the
 
 ### Features to Implement
 
-> 🧭 **Roadmap note (2026-06-30):** the items below mostly hang off one foundation. Today the app
-> has two kinds of keys: typed-character keys (movable, set in Settings) and special action keys
-> (Esc/Tab/arrows/F-keys/SYM, hardcoded in `Definitions`). Making the editable rows able to hold
-> special keys (the "foundation" item) turns most of the button/page features into "register one
-> more button". Suggested order: foundation -> Settings button -> Emoji page -> AI reword/prompts.
+> 🧭 **Roadmap note (updated 2026-07-02):** the token **foundation has landed** (see Completed
+> Recently), along with the Settings button, the Emoji page, scroll keys, and ghost mode. The
+> remaining button features below now really are "register one more button".
 
-- [ ] **Fully customizable rows incl. special keys (the "foundation")** (medium-large). Today the
-      editable rows (`addCustomRow`) only accept plain characters; special keys are hardcoded. Goal:
-      let any customizable row hold special keys too, EXCEPT the letter rows, Shift/Ctrl, and the
-      bottom row (those stay fixed). MVP: a token syntax in the existing text fields (e.g.
-      `{esc} {tab} {<} {sym}`) plus an action-key registry mapping each token to its icon/label/code,
-      and handling new codes in `CodeBoardIME.onKey`. Deluxe (later): a visual row-builder UI.
-- [ ] **Buttons that ride on the foundation** (do after the foundation lands):
-      - **Settings button** that opens the app settings (trivial once tokens exist).
-      - **Emoji page** (a new page like SYM; study how DevEmperor/DictateKeyboard builds its emoji grid).
-      - **AI reword + an AI-prompts page** (copy DictateKeyboard's functionality but in our own UI:
-        send the selected text to an LLM with the user's own API key, paste back the result; plus a
-        page of preset prompt buttons). Pull the current Claude API details when building it.
-      - **Suggested-word button**: a SINGLE button (not a suggestion strip) showing the correction
-        from Android's spellcheck, so a tap fixes "wont"->"won't", "pottoes"->"potatoes".
+- [ ] **AI reword + an AI-prompts page** (copy DictateKeyboard's functionality but in our own UI:
+      send the selected text to an LLM with the user's own API key, paste back the result; plus a
+      page of preset prompt buttons). Pull the current Claude API details when building it.
+- [ ] **Suggested-word button**: a SINGLE button (not a suggestion strip) showing the correction
+      from Android's spellcheck, so a tap fixes "wont"->"won't", "pottoes"->"potatoes".
+- [ ] **Visual row-builder UI** (the "deluxe" version of the token foundation): a settings screen
+      that builds a custom row by picking keys from a palette instead of typing `{tokens}`.
 - [ ] **Apply the split stagger to QWERTZ / AZERTY / Dvorak** once QWERTY is confirmed good on a
       device. QWERTY has the hand-tuned 0.4 inset; the others currently split without it. Doing this
       also brings their bottom row (Ctrl/comma/period/Enter) into line, since the shared bottom row
@@ -78,6 +69,34 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Completed Recently
+- [x] **Custom-row special keys (the "foundation") + five new buttons** (2026-07-02, v6.1.0):
+      every editable row (main top/second, SYM rows, SYM-page bottom row) now accepts special keys
+      via `{token}` syntax. The registry lives in `Definitions.addTokenKey` (names in `TOKENS`);
+      parsing is in `Definitions.parseUnits` (unknown tokens and lone braces like the default
+      `[]{}` row stay literal characters, so old rows are untouched). Letter rows, Shift/Ctrl and
+      the fixed bottom row stay hardcoded, as planned. Tokens for every existing action key
+      ({esc} {tab} {sym} {clip} arrows {home} {end} {pgup} {pgdn} {ins} {del} {f1}..{f12}
+      {selectall} {cut} {copy} {paste} {undo} {redo} {space} {enter} {bksp}) plus five NEW keys:
+      - **{settings}**: opens the app's settings screen.
+      - **{emoji}**: a full emoji page (category tabs, scrollable grid, recents stored in prefs,
+        ABC/space/backspace bottom row). New files `EmojiData.java` + `EmojiPageView.java`; page
+        state `keyboard_emoji`. Inspired by DictateKeyboard's picker but built natively (Dictate is
+        Kotlin-on-FlorisBoard, nothing portable).
+      - **{scrollup}/{scrolldown}**: mouse-wheel-style scroll clicks. One press sends N discrete
+        arrow-key events (new "Scroll lines per click" setting, default 3, like Windows' wheel
+        setting); hold to auto-repeat. NOTE: Android IMEs cannot inject true wheel MotionEvents
+        into other apps, so arrow keys are the closest primitive; remote-desktop clients forward
+        them to the host.
+      - **{ghost}**: ghost mode. The keyboard turns highly transparent (new "Ghost mode opacity
+        (%)" setting, default 25) and stops pushing app content up (`onComputeInsets` reports zero
+        content inset + `TOUCHABLE_INSETS_FRAME`), for remoting into a desktop without the
+        mirrored screen shrinking. Tradeoff: while on, UI behind the keyboard area cannot be
+        tapped (the whole frame belongs to the keyboard).
+      The second main row's DEFAULT is now `{emoji}{scrollup}{scrolldown}{ghost}{settings}` as a
+      demo (an existing saved row wins; clear it in settings to get the demo row). Settings gained
+      a token cheat-sheet above the row fields. Verified on the Fold4: token row renders split
+      3+2, emoji typing + recents work, ghost toggles on/off with full-size app behind, settings
+      key opens settings. versionCode 24 / 6.1.0.
 - [x] **Split-mode bottom-row + SYM-row alignment** (2026-06-30): with the QWERTY stagger,
       Shift/Backspace are 1.4 wide, so the shared bottom row (Ctrl/comma/space/period/Enter) and the
       SYM page's F-key row had drifted out of line. Made `0.4` a single `SPLIT_END_SPACER` constant
@@ -247,6 +266,16 @@ actually works (architecture, codebase map, build and install) is in the
 ---
 
 ## Future Ideas
+- [ ] **Ghost mode: per-key touchable region.** Right now the whole keyboard frame captures
+      touches while ghost mode is on, so buttons behind it (e.g. a dialog's OK) cannot be tapped.
+      `onComputeInsets` also supports `TOUCHABLE_INSETS_REGION` + a `touchableRegion` of just the
+      key rectangles, which would let taps between keys fall through to the app.
+- [ ] **True mouse-wheel scrolling** for the scroll keys. An IME cannot inject wheel MotionEvents
+      into other apps. If arrow-key forwarding proves insufficient for remote desktop, the real
+      fix is a separate Bluetooth-HID mouse emulator (the phone pairs to the PC as a mouse), a
+      project on its own.
+- [ ] **Emoji page extras**: skin-tone variants on long-press, search, smarter recents (frequency
+      instead of most-recent-first).
 - [ ] **Floating keyboard** (low priority, far future): a movable/floating keyboard window like
       DictateKeyboard. Android IMEs do not float easily (needs special window handling), so this is
       a project on its own, not a quick button.
@@ -264,10 +293,12 @@ actually works (architecture, codebase map, build and install) is in the
 ## Feature Plans
 
 No detailed plans are pending. The long-press keyboard work (Stages 1-3: corner
-symbols, alternates grid, press preview, split keyboard, spacebar cursor) is all
-done, see Completed Recently and the README "Long-press reference" / architecture
-section for how it works. The only open feature, **clipboard history (Feature E)**,
-still needs a design pass before it gets a plan here.
+symbols, alternates grid, press preview, split keyboard, spacebar cursor) and the
+custom-row token foundation (with the settings/emoji/scroll/ghost keys) are done,
+see Completed Recently and the README "Long-press reference" / architecture
+section for how they work. The open features (**clipboard history (Feature E)**,
+**AI reword**, **suggested-word button**) still need a design pass before they
+get a plan here.
 
 Tunables worth revisiting after on-device testing (all in code, easy to change):
 - Split central gap: computed per-build by `CodeBoardIME.computeSplitGap` so each half is

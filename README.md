@@ -22,6 +22,7 @@ useful, please consider supporting the original author (see [Credits](#credits--
 - [Build from source](#build-from-source)
 - [Continuous integration (building APKs on GitHub)](#continuous-integration-building-apks-on-github)
 - [Using the keyboard](#using-the-keyboard)
+- [Special-key tokens in custom rows](#special-key-tokens-in-custom-rows)
 - [Long-press reference](#long-press-reference)
 - [Settings reference](#settings-reference)
 - [Backup and restore](#backup-and-restore)
@@ -63,6 +64,20 @@ deciding whether to switch, this is what to expect:
 - **Up-arrow Shift key** (matches the backspace width) with a clear **caps-lock**
   indicator (underlined arrow; double-tap or long-press to lock), and a symmetric
   bottom row (equal-width Ctrl and Enter, letter-width comma/period).
+- **Special keys in the custom rows**: every editable row accepts `{token}`s
+  (`{esc}`, `{tab}`, arrows, `{copy}`, `{f1}`..`{f12}`, ...) next to plain
+  characters, so you can compose your own action rows (see
+  [Special-key tokens](#special-key-tokens-in-custom-rows)).
+- **Emoji page** (`{emoji}` key): category tabs, a scrollable grid, and a
+  recently-used row, with ABC/space/backspace at the bottom.
+- **Scroll keys** (`{scrollup}` / `{scrolldown}`): each press acts like one click
+  of a mouse wheel and sends a configurable number of arrow-key events (great for
+  scrolling in remote-desktop sessions; hold to repeat).
+- **Ghost mode** (`{ghost}` key): the keyboard turns highly transparent and stops
+  pushing the app's content up, so a remote-desktop screen keeps its full size
+  while you type.
+- **Settings key** (`{settings}`): opens the app's settings straight from the
+  keyboard.
 - Plus fixes: symbol-row defaults, a third symbol row, the settings banner overlap.
 - **Planned:** an advanced clipboard history (see [`TODO.md`](./TODO.md)).
 
@@ -78,7 +93,16 @@ deciding whether to switch, this is what to expect:
   White, Blue, Purple) plus a fully custom foreground/background color option.
 - **Customisable symbol rows.** The top row (default `` `1234567890-= ``), the SYM-page
   rows, and the optional extra main rows are plain text fields in settings, so you can
-  type your own row of characters. (The letter rows are fixed.)
+  type your own row of characters. (The letter rows are fixed.) The rows also accept
+  **special-key tokens** like `{esc}`, `{left}`, `{copy}`, `{emoji}`, `{scrollup}`,
+  `{ghost}`, `{settings}` - see [Special-key tokens](#special-key-tokens-in-custom-rows).
+  The second main row defaults to a demo of the new keys:
+  `{emoji}{scrollup}{scrolldown}{ghost}{settings}`.
+- **Emoji page**: tap the `{emoji}` key for a Gboard-style emoji picker (category
+  tabs, scrollable grid, recents) that types straight into the current field.
+- **Scroll keys and ghost mode** for remote-desktop use: wheel-like scroll clicks
+  with a lines-per-click setting, and a transparent keyboard that does not squeeze
+  the app behind it.
 - **Clipboard pins (Ctrl+SYM):** up to 7 saved snippets you can paste instantly.
 - **Backup and restore:** export every setting and custom symbol row to a JSON
   file, then import it on another device or after a reinstall.
@@ -210,6 +234,52 @@ committed, always keep that in secrets.
   screens, each half stops growing at 5 key-heights so the gap takes the extra space and the keys
   stay near your thumbs. The left/right margin is set by **Split side margin (%)** (default 5).
 - **Hold an arrow key** to auto-repeat it.
+- **Emoji page:** tap an `{emoji}` key to open it. Category tabs on top (the clock
+  is your recently used emojis), a scrollable grid in the middle, and ABC (back to
+  letters), space, and backspace at the bottom. Tapping an emoji types it.
+- **Ghost mode:** tap a `{ghost}` key (👻) to toggle. The keyboard becomes highly
+  transparent and the app behind it keeps its full size (nothing is pushed up).
+  Meant for remote-desktop apps, where the resize would shrink the mirrored
+  screen. While it is on, everything behind the keyboard area is visible but not
+  tappable; tap 👻 again to return to normal.
+- **Scroll keys:** `{scrollup}` / `{scrolldown}` act like clicks of a mouse wheel:
+  each press sends "Scroll lines per click" (default 3) arrow-key events, and
+  holding repeats. In a remote-desktop session those arrows are forwarded to the
+  host and scroll whatever has keyboard focus.
+
+---
+
+## Special-key tokens in custom rows
+
+Every editable row (Main top/second row, the SYM rows, and the SYM-page bottom
+row) accepts **tokens** next to plain characters. A token is a key name in curly
+braces; anything else in the text stays an ordinary character key. Unknown
+tokens and lone braces are kept as literal characters, so the default SYM row
+`` \|/[]{}<>: `` still builds exactly as before.
+
+| Tokens | Keys they add |
+|---|---|
+| `{esc}` `{tab}` `{sym}` `{clip}` | Esc, Tab, the SYM page switch, the clipboard-pins page |
+| `{left}` `{right}` `{up}` `{down}` | Arrow keys (auto-repeat on hold) |
+| `{home}` `{end}` `{pgup}` `{pgdn}` `{ins}` `{del}` | Navigation and editing keys |
+| `{f1}` ... `{f12}` | Function keys |
+| `{selectall}` `{cut}` `{copy}` `{paste}` `{undo}` `{redo}` | Editing actions |
+| `{space}` `{enter}` `{bksp}` | Extra space/Enter/Backspace keys |
+| `{settings}` | Opens this app's settings |
+| `{emoji}` | Opens the emoji page |
+| `{scrollup}` `{scrolldown}` | Mouse-wheel-style scroll clicks (see the "Scroll lines per click" setting) |
+| `{ghost}` | Toggles ghost mode (transparent keyboard that does not push the app up) |
+
+Example: setting *Main keyboard [Second Row]* to
+`{emoji}{scrollup}{scrolldown}{ghost}{settings}` (the default on fresh installs)
+adds a row with those five keys. The letter rows, Shift, Ctrl, and the fixed
+bottom row are not customizable, by design.
+
+> **Why the scroll keys use arrow events:** Android does not let a keyboard app
+> inject true mouse-wheel events into other apps, so each "click" sends N
+> discrete arrow-key presses instead (N is the "Scroll lines per click"
+> setting, like the lines-per-click setting of a real mouse wheel). Remote
+> desktop clients forward these to the host machine.
 
 ---
 
@@ -307,9 +377,9 @@ Settings live in *Codeboard app → Settings*, backed by
 | Category | What it controls |
 |---|---|
 | **View Keyboard** | Open the IME picker; a scratch text field to test typing. |
-| **Features** | Key-press sound, vibration (+ length in ms), font size, keyboard size (portrait and landscape), key-press preview, notification shortcut. |
+| **Features** | Key-press sound, vibration (+ length in ms), font size, keyboard size (portrait and landscape), key-press preview, notification shortcut, **Scroll lines per click** (arrow events per `{scrollup}`/`{scrolldown}` press, default 3), **Ghost mode opacity (%)** (keyboard visibility while `{ghost}` is on, default 25). |
 | **Colour** | Theme picker, custom theme toggle with background/foreground color pickers, key borders, dynamic navigation-bar coloring. |
-| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off / Auto / On, Auto default)**, **Split side margin (%)** (left/right margin in split mode, default 5), "top row actions" toggle, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth). The letter rows are fixed. |
+| **Layout** | Base layout (QWERTY/AZERTY/Dvorak/QWERTZ), **Split keyboard (Off / Auto / On, Auto default)**, **Split side margin (%)** (left/right margin in split mode, default 5), "top row actions" toggle, a **special-key token cheat sheet**, and editable text for the customisable rows (main top/second/bottom, SYM top/second/third/fourth), all of which accept `{token}`s (see [Special-key tokens](#special-key-tokens-in-custom-rows)). The letter rows are fixed. |
 | **Clipboard [Ctrl+SYM]** | The 7 pinned clipboard snippets. |
 | **Backup** | Export / import all settings (see below). |
 | **Restore** | Reset everything to default, or reset just the symbols to the "Old Codeboard" layout. |
@@ -396,10 +466,12 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 
 | File | Role |
 |---|---|
-| `CodeBoardIME.java` | The IME service. Assembles the keyboard, owns the long-press `Timer`, `onPress` / `onKey` / `onText` / `onKeyLongPress`, and dispatches characters and key events to the active text field. |
+| `CodeBoardIME.java` | The IME service. Assembles the keyboard, owns the long-press `Timer`, `onPress` / `onKey` / `onText` / `onKeyLongPress`, and dispatches characters and key events to the active text field. Also hosts the new action codes (settings/emoji/scroll/ghost/clip pages), the emoji page state, and ghost mode's `onComputeInsets` override. |
 | `layout/Box.java` | Normalized (0.0 to 1.0) rectangle used to position a key. |
 | `layout/Key.java` | Runtime model of a placed key (its `Box` + its `KeyInfo`). |
-| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows (incl. the editable top row; `addCustomRow` attaches digit fraction popups via `addDigitFractionPopup`). Per-letter long-press is split into shared accent **data** (`letterSymbol` / `letterAccents`) and per-layout **arrangement** (`addLetterKey`, the seam for future per-layout tuning; QWERTY keeps a hand-tuned arrangement inline). `splitCurrentRow` adds the central split gap to rows that have no manual split. |
+| `layout/Definitions.java` | Concrete key/row definitions: the four base layouts (QWERTY/AZERTY/Dvorak/QWERTZ), the Gboard-style long-press rows (corner symbols + alternates) and bottom row, the arrows row, the copy/paste row, and custom symbol rows (incl. the editable top row; `addCustomRow` attaches digit fraction popups via `addDigitFractionPopup`). Also the **special-key token system**: `TOKENS` (the recognised names), `parseUnits` (splits a row string into characters and `{token}` units), and `addTokenKey` (the registry mapping each token to its key), plus the new action-code constants (`CODE_SETTINGS`, `CODE_EMOJI_PAGE`, `CODE_SCROLL_UP/DOWN`, `CODE_GHOST_MODE`, `CODE_CLIPBOARD_PAGE`). Per-letter long-press is split into shared accent **data** (`letterSymbol` / `letterAccents`) and per-layout **arrangement** (`addLetterKey`, the seam for future per-layout tuning; QWERTY keeps a hand-tuned arrangement inline). `splitCurrentRow` adds the central split gap to rows that have no manual split. |
+| `layout/EmojiData.java` | Static emoji catalog for the emoji page: category tab glyphs and the emojis per category (index 0 = recents, filled from preferences at runtime). |
+| `layout/ui/EmojiPageView.java` | The emoji page view: category tabs, the scrollable `GridView` of emojis, and the ABC/space/backspace bottom row. Calls back into `CodeBoardIME` (`commitEmoji`, `exitEmojiPage`, `keyFeedback`). |
 | `layout/builder/KeyboardLayoutBuilder.java` | Fluent builder that assembles rows/keys and computes the normalized layout. |
 | `layout/builder/KeyboardLayoutRowBuilder.java` | Distributes key widths within a single row. |
 | `layout/builder/KeyInfo.java` | The per-key data model (label, codes, shift behavior, the long-press fields `cornerLabel` / `popupChars` / `popupDefaultIndex` / `popupColumns`, and `isSpacer` for empty gap "keys"). |
@@ -412,7 +484,7 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 | `theme/ThemeDefinitions.java` | The seven built-in theme presets. |
 | `theme/ThemeInfo.java` | Data holder for a single theme's colors. |
 | `theme/IOnFocusListenable.java` | Small focus-callback interface. |
-| `KeyboardPreferences.java` | Every `SharedPreferences` read/write in one place, plus `exportToJson()` / `importFromJson()` for Backup. |
+| `KeyboardPreferences.java` | Every `SharedPreferences` read/write in one place (incl. scroll lines, ghost opacity, and the recent-emojis list), plus `exportToJson()` / `importFromJson()` for Backup. |
 | `SettingsFragment.java` | The settings screen logic, including the Storage Access Framework launchers for Backup. |
 | `MainActivity.java` | Launcher activity and the IME's settings host. |
 | `IntroActivity.java` / `IntroFragment.java` | First-run tutorial (built on the AppIntro library). |
@@ -438,7 +510,7 @@ onTouchEvent(ACTION_UP) ───► animateRelease()  (drop the key view back)
 |---|---|
 | Application ID | `com.gazlaws.codeboard.fork` (distinct from the original `com.gazlaws.codeboard`, so both can be installed side by side) |
 | App name | "CodeBoard Fork" (placeholder, rename in `res/values/strings.xml`) |
-| Version | 6.0.3 (versionCode 23) |
+| Version | 6.1.0 (versionCode 24) |
 | Min SDK | 23 (Android 6.0) |
 | Target SDK | 35 |
 | Compile SDK | 34 |

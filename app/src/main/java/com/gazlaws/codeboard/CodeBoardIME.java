@@ -44,10 +44,12 @@ import com.gazlaws.codeboard.layout.Definitions;
 import com.gazlaws.codeboard.layout.Key;
 import com.gazlaws.codeboard.layout.builder.KeyboardLayoutBuilder;
 import com.gazlaws.codeboard.layout.builder.KeyboardLayoutException;
+import com.gazlaws.codeboard.layout.ui.EmojiPageView;
 import com.gazlaws.codeboard.layout.ui.KeyboardLayoutView;
 import com.gazlaws.codeboard.layout.ui.KeyboardUiFactory;
 import com.gazlaws.codeboard.theme.ThemeDefinitions;
 import com.gazlaws.codeboard.theme.ThemeInfo;
+import com.gazlaws.codeboard.theme.UiTheme;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -86,6 +88,13 @@ public class CodeBoardIME extends InputMethodService
     // Two Shift taps within this window (ms) toggle caps lock, like Gboard.
     private static final long SHIFT_DOUBLE_TAP_MS = 300;
     private long mLastShiftTapMs = 0;
+    // Ghost mode ({ghost} key): the keyboard turns highly transparent and stops pushing the app's
+    // content up (see onComputeInsets). Session state, reset when the IME service restarts.
+    private boolean ghostMode = false;
+    private float ghostOpacity = 0.25f; // from the "Ghost mode opacity (%)" setting
+    // How many arrow-key events one press of a {scrollup}/{scrolldown} key sends (the
+    // "Scroll lines per click" setting), like the lines-per-click of a mouse wheel.
+    private int scrollLines = 3;
 
     @Override
     public void onKey(int primaryCode, int[] KeyCodes) {
@@ -113,6 +122,35 @@ public class CodeBoardIME extends InputMethodService
                 break;
             case 53742:
                 ic.performContextMenuAction(android.R.id.redo);
+                break;
+            case Definitions.CODE_SETTINGS: {
+                // Open the app's settings screen (started from a service, so it needs NEW_TASK).
+                Intent settingsIntent = new Intent(this, MainActivity.class);
+                settingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(settingsIntent);
+                break;
+            }
+            case Definitions.CODE_EMOJI_PAGE:
+                mKeyboardState = R.integer.keyboard_emoji;
+                setInputView(onCreateInputView());
+                break;
+            case Definitions.CODE_CLIPBOARD_PAGE:
+                mKeyboardState = R.integer.keyboard_clipboard;
+                setInputView(onCreateInputView());
+                break;
+            case Definitions.CODE_GHOST_MODE:
+                // Toggle the transparent, non-pushing keyboard (see onComputeInsets). Rebuild the
+                // view so the new opacity applies and the app relayouts around the new insets.
+                ghostMode = !ghostMode;
+                setInputView(onCreateInputView());
+                controlKeyUpdateView();
+                shiftKeyUpdateView();
+                break;
+            case Definitions.CODE_SCROLL_UP:
+                sendScrollKeyEvents(ic, KeyEvent.KEYCODE_DPAD_UP);
+                break;
+            case Definitions.CODE_SCROLL_DOWN:
+                sendScrollKeyEvents(ic, KeyEvent.KEYCODE_DPAD_DOWN);
                 break;
             case -1:
                 //SYM
@@ -346,7 +384,9 @@ public class CodeBoardIME extends InputMethodService
         }
     }
 
-    public void onPress(final int primaryCode) {
+    /** Key-press sound and vibration, following the user's settings. Public so views that are not
+     *  KeyboardButtonViews (the emoji page) can give the same feedback. */
+    public void keyFeedback() {
         if (soundOn) {
             MediaPlayer keypressSoundPlayer = MediaPlayer.create(this, R.raw.keypress_sound);
             keypressSoundPlayer.start();
@@ -361,6 +401,10 @@ public class CodeBoardIME extends InputMethodService
             if (vibrator != null)
                 vibrator.vibrate(vibrateLength);
         }
+    }
+
+    public void onPress(final int primaryCode) {
+        keyFeedback();
 
         clearLongPressTimer();
         timerLongPress = new Timer();
@@ -604,6 +648,8 @@ public class CodeBoardIME extends InputMethodService
         vibrateLength = sharedPreferences.getVibrateLength();
         vibratorOn = sharedPreferences.isVibrateEnabled();
         soundOn = sharedPreferences.isSoundEnabled();
+        scrollLines = sharedPreferences.getScrollLines();
+        ghostOpacity = sharedPreferences.getGhostOpacity();
         mKeyboardUiFactory.theme.enablePreview = sharedPreferences.isPreviewEnabled();
         mKeyboardUiFactory.theme.enableBorder = sharedPreferences.isBorderEnabled();
         mKeyboardUiFactory.theme.fontSize = sharedPreferences.getFontSizeAsSp();
@@ -620,6 +666,15 @@ public class CodeBoardIME extends InputMethodService
             Objects.requireNonNull(getWindow().getWindow()).
                     setNavigationBarColor(mKeyboardUiFactory.theme.backgroundColor);
         }
+        // The emoji page is its own view (tabs + scrollable grid), not a key layout.
+        if (mKeyboardState == R.integer.keyboard_emoji) {
+            EmojiPageView emojiView = new EmojiPageView(this, this,
+                    UiTheme.buildFromInfo(mKeyboardUiFactory.theme), sharedPreferences);
+            emojiView.setAlpha(ghostMode ? ghostOpacity : 1f);
+            mCurrentKeyboardLayoutView = null;
+            return emojiView;
+        }
+
         //Key Layout
         boolean mToprow = sharedPreferences.getTopRowActions();
         String mCustomSymbolsMain = sharedPreferences.getCustomSymbolsMain();
@@ -674,16 +729,16 @@ public class CodeBoardIME extends InputMethodService
 
             if (mKeyboardState == R.integer.keyboard_sym) {
                 if (!mCustomSymbolsSym.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym, splitGap);
+                    definitions.addCustomRow(builder, mCustomSymbolsSym, splitGap);
                 }
                 if (!mCustomSymbolsSym2.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym2, splitGap);
+                    definitions.addCustomRow(builder, mCustomSymbolsSym2, splitGap);
                 }
                 if (!mCustomSymbolsSym3.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym3, splitGap);
+                    definitions.addCustomRow(builder, mCustomSymbolsSym3, splitGap);
                 }
                 if (!mCustomSymbolsSym4.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsSym4, splitGap);
+                    definitions.addCustomRow(builder, mCustomSymbolsSym4, splitGap);
                 }
                 // Keep the function-key rows (F1-F12, Home/End/Del, PgUp/PgDn) whenever
                 // the fourth row is unused. Adding only a third row now augments the
@@ -698,10 +753,10 @@ public class CodeBoardIME extends InputMethodService
             } else if (mKeyboardState == R.integer.keyboard_normal) {
                 // Customizable top row (the editable "Main keyboard [Top Row]", default `1234567890-=).
                 if (!mCustomSymbolsMain.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsMain, splitGap);
+                    definitions.addCustomRow(builder, mCustomSymbolsMain, splitGap);
                 }
                 if (!mCustomSymbolsMain2.isEmpty()) {
-                    Definitions.addCustomRow(builder, mCustomSymbolsMain2, splitGap);
+                    definitions.addCustomRow(builder, mCustomSymbolsMain2, splitGap);
                 }
                 // Every layout is now Gboard-style (corner symbols + long-press popups).
                 if (mLayout == 0) {
@@ -754,6 +809,7 @@ public class CodeBoardIME extends InputMethodService
             if (shiftLock) {
                 mCurrentKeyboardLayoutView.applyCapsLock(true);
             }
+            mCurrentKeyboardLayoutView.setAlpha(ghostMode ? ghostOpacity : 1f);
             return mCurrentKeyboardLayoutView;
 
         } catch (KeyboardLayoutException e) {
@@ -776,16 +832,73 @@ public class CodeBoardIME extends InputMethodService
     }
 
     public void controlKeyUpdateView() {
-        mCurrentKeyboardLayoutView.applyCtrlModifier(ctrl);
+        if (mCurrentKeyboardLayoutView != null) {
+            mCurrentKeyboardLayoutView.applyCtrlModifier(ctrl);
+        }
     }
 
     public void shiftKeyUpdateView() {
-        mCurrentKeyboardLayoutView.applyShiftModifier(shift);
+        if (mCurrentKeyboardLayoutView != null) {
+            mCurrentKeyboardLayoutView.applyShiftModifier(shift);
+        }
     }
 
     public void capsLockUpdateView() {
         if (mCurrentKeyboardLayoutView != null) {
             mCurrentKeyboardLayoutView.applyCapsLock(shiftLock);
+        }
+    }
+
+    /**
+     * One press of a scroll key acts like one click of a mouse wheel: it fires N discrete
+     * arrow-key events (N = the "Scroll lines per click" setting). Android does not let an IME
+     * inject real mouse-wheel events into other apps, so arrow keys are the closest equivalent;
+     * remote-desktop clients forward them to the remote machine, where they scroll whatever has
+     * keyboard focus (a web page, a document) line by line.
+     */
+    private void sendScrollKeyEvents(InputConnection ic, int keyCode) {
+        if (ic == null) {
+            return;
+        }
+        for (int i = 0; i < scrollLines; i++) {
+            ic.sendKeyEvent(new KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, 0));
+            ic.sendKeyEvent(new KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, 0));
+        }
+    }
+
+    /** Called by the emoji page when an emoji is tapped: type it into the current editor. */
+    public void commitEmoji(String emoji) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic != null) {
+            ic.commitText(emoji, 1);
+        }
+    }
+
+    /** Called by the emoji page's ABC key: back to the normal letters page. */
+    public void exitEmojiPage() {
+        mKeyboardState = R.integer.keyboard_normal;
+        setInputView(onCreateInputView());
+        controlKeyUpdateView();
+        shiftKeyUpdateView();
+    }
+
+    /**
+     * Ghost mode: report the keyboard as occupying no content space, so the app behind it is NOT
+     * resized or panned when the keyboard shows. Input fields may then sit hidden behind the
+     * keyboard, which is the point: when remoting into a desktop, the mirrored screen keeps its
+     * full size instead of being squeezed above the keyboard. The whole IME window stays
+     * touchable (TOUCHABLE_INSETS_FRAME), so the transparent keys keep working.
+     */
+    @Override
+    public void onComputeInsets(InputMethodService.Insets outInsets) {
+        super.onComputeInsets(outInsets);
+        if (ghostMode) {
+            View decor = getWindow() != null && getWindow().getWindow() != null
+                    ? getWindow().getWindow().getDecorView() : null;
+            int height = decor != null ? decor.getHeight() : 0;
+            outInsets.contentTopInsets = height;
+            outInsets.visibleTopInsets = height;
+            outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_FRAME;
         }
     }
 

@@ -48,6 +48,18 @@
             android:defaultValue="@bool/notification"
             android:title="Open keyboard using notification"
             android:key="notification" />
+        <EditTextPreference
+            android:defaultValue="@integer/scroll_lines"
+            android:imeOptions="flagNoExtractUi"
+            android:key="scroll_lines"
+            android:summary="How many lines one press of a scroll key moves, like the lines-per-click setting of a mouse wheel. Used by the {scrollup} and {scrolldown} keys."
+            android:title="Scroll lines per click" />
+        <EditTextPreference
+            android:defaultValue="@integer/ghost_opacity"
+            android:imeOptions="flagNoExtractUi"
+            android:key="ghost_opacity"
+            android:summary="Keyboard visibility while ghost mode is on (toggled by the {ghost} key). 100 = solid, 5 = nearly invisible."
+            android:title="Ghost mode opacity (%)" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Colour">
@@ -110,6 +122,11 @@
             android:defaultValue="@bool/top_row_actions"
             android:key="top_row_actions"
             android:title="@string/top_row_actions" />
+        <Preference
+            android:key="token_help"
+            android:selectable="false"
+            android:summary="The row texts below accept special keys as tokens: {esc} {tab} {sym} {clip} {left} {right} {up} {down} {home} {end} {pgup} {pgdn} {ins} {del} {f1}…{f12} {selectall} {cut} {copy} {paste} {undo} {redo} {space} {enter} {bksp} {settings} {emoji} {scrollup} {scrolldown} {ghost}. Any other character stays a normal key."
+            android:title="Special keys in custom rows" />
         <EditTextPreference
             android:defaultValue="@string/input_symbols_main"
             android:imeOptions="flagNoExtractUi"

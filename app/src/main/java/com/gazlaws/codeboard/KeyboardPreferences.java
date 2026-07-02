@@ -8,10 +8,14 @@ import android.util.TypedValue;
 
 import androidx.preference.PreferenceManager;
 
+import android.text.TextUtils;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class KeyboardPreferences {
@@ -217,6 +221,68 @@ public class KeyboardPreferences {
         } catch (Exception e) {
             return 0.05f;
         }
+    }
+
+    /**
+     * How many "lines" one press of a {scrollup}/{scrolldown} key moves: each press sends this
+     * many arrow-key events, like the lines-per-click setting of a mouse wheel. Clamped 1..50.
+     */
+    public int getScrollLines() {
+        try {
+            int n = Integer.parseInt(safeRead("scroll_lines",
+                    String.valueOf(res.getInteger(R.integer.scroll_lines))));
+            if (n < 1) n = 1;
+            if (n > 50) n = 50;
+            return n;
+        } catch (Exception e) {
+            return 3;
+        }
+    }
+
+    /**
+     * Keyboard opacity while ghost mode is on, as a fraction (stored as a whole-number percent,
+     * default 25). Clamped to 5..100% so the keyboard can never become fully invisible.
+     */
+    public float getGhostOpacity() {
+        try {
+            int pct = Integer.parseInt(safeRead("ghost_opacity",
+                    String.valueOf(res.getInteger(R.integer.ghost_opacity))));
+            if (pct < 5) pct = 5;
+            if (pct > 100) pct = 100;
+            return pct / 100f;
+        } catch (Exception e) {
+            return 0.25f;
+        }
+    }
+
+    private static final int MAX_RECENT_EMOJIS = 40;
+
+    /** Recently used emojis for the emoji page, most recent first (comma-separated in prefs). */
+    public List<String> getRecentEmojis() {
+        String raw = read("recent_emojis", "");
+        ArrayList<String> list = new ArrayList<>();
+        if (raw != null && !raw.isEmpty()) {
+            for (String s : raw.split(",")) {
+                if (!s.isEmpty()) {
+                    list.add(s);
+                }
+            }
+        }
+        return list;
+    }
+
+    /** Moves (or inserts) an emoji to the front of the recent list, capped at MAX_RECENT_EMOJIS. */
+    public void addRecentEmoji(String emoji) {
+        if (emoji == null || emoji.isEmpty() || emoji.contains(",")) {
+            return;
+        }
+        List<String> list = getRecentEmojis();
+        list.remove(emoji);
+        list.add(0, emoji);
+        while (list.size() > MAX_RECENT_EMOJIS) {
+            list.remove(list.size() - 1);
+        }
+        write("recent_emojis", TextUtils.join(",", list));
     }
 
     public int getThemeIndex() {

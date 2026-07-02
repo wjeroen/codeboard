@@ -5,10 +5,27 @@ import android.content.Context;
 import com.gazlaws.codeboard.R;
 import com.gazlaws.codeboard.layout.builder.KeyboardLayoutBuilder;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
 public class Definitions {
     private Context context;
     private static final int CODE_ESCAPE = -2;
     private static final int CODE_SYMBOLS = -1;
+
+    // Action codes for the special keys that can live on customizable rows (via the {token}
+    // syntax, see addCustomRow). Handled in CodeBoardIME.onKey. The 537xx range continues the
+    // existing select-all/cut/copy/paste/undo/redo block (53737..53742).
+    public static final int CODE_SETTINGS = 53743;       // open the app's settings screen
+    public static final int CODE_EMOJI_PAGE = 53744;     // open the emoji page
+    public static final int CODE_SCROLL_UP = 53745;      // one mouse-wheel-like scroll click up
+    public static final int CODE_SCROLL_DOWN = 53746;    // one mouse-wheel-like scroll click down
+    public static final int CODE_GHOST_MODE = 53747;     // toggle the transparent non-pushing keyboard
+    public static final int CODE_CLIPBOARD_PAGE = 53748; // open the clipboard-pins page directly
     // Split-mode stagger inset: the home/bottom letter rows are inset by this many key-widths at
     // each outer end, and Shift/Backspace (plus the bottom row's Ctrl/Enter) grow by the same
     // amount so the columns line up. About 2/5 of a key, per the Gboard reference. One knob to tune.
@@ -52,12 +69,107 @@ public class Definitions {
     }
 
 
-    public static void addCustomRow(KeyboardLayoutBuilder keyboard, String symbols, float splitGap) {
-        keyboard.newRow();
-        char[] chars = symbols.toCharArray();
-        for (char aChar : chars) {
+    // --- Customizable rows with special-key tokens ----------------------------------------------
+    //
+    // Every editable row (main top/second, the SYM rows, the SYM-page bottom row) accepts special
+    // keys through a token syntax: any {token} from TOKENS below becomes that action key, every
+    // other character stays a plain typing key. Unknown tokens and lone braces fall back to
+    // literal characters, so an existing row like the default "\\|/[]{}<>:" builds exactly as
+    // before. This is the "foundation" from TODO.md: the letter rows, Shift/Ctrl and the fixed
+    // bottom row stay hardcoded.
+
+    /** Every recognised token name (lowercase, without braces). Keep in sync with addTokenKey. */
+    private static final Set<String> TOKENS = new HashSet<>(Arrays.asList(
+            "esc", "tab", "sym", "clip", "left", "right", "up", "down", "home", "end",
+            "pgup", "pgdn", "ins", "del", "selectall", "cut", "copy", "paste", "undo", "redo",
+            "space", "enter", "bksp", "backspace", "settings", "emoji", "scrollup", "scrolldown",
+            "ghost", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"));
+
+    private static boolean isKnownToken(String token) {
+        return TOKENS.contains(token.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Splits a custom-row string into units: one "{token}" unit per recognised token, otherwise
+     * one unit per character. A brace that does not open a known token stays a literal character.
+     */
+    private static List<String> parseUnits(String symbols) {
+        List<String> units = new ArrayList<>();
+        int i = 0;
+        while (i < symbols.length()) {
+            char c = symbols.charAt(i);
+            if (c == '{') {
+                int close = symbols.indexOf('}', i + 1);
+                if (close > i + 1 && isKnownToken(symbols.substring(i + 1, close))) {
+                    units.add(symbols.substring(i, close + 1));
+                    i = close + 1;
+                    continue;
+                }
+            }
+            units.add(String.valueOf(c));
+            i++;
+        }
+        return units;
+    }
+
+    /** Adds one parsed unit to the current row: a special key for a "{token}" unit, otherwise a
+     *  plain character key (digits keep their Gboard fraction popup). */
+    private void addUnitKey(KeyboardLayoutBuilder keyboard, String unit) {
+        if (unit.length() > 1 && unit.charAt(0) == '{') {
+            addTokenKey(keyboard, unit.substring(1, unit.length() - 1).toLowerCase(Locale.ROOT));
+        } else {
+            char aChar = unit.charAt(0);
             keyboard.addKey(aChar);
             addDigitFractionPopup(keyboard, aChar); // digits get Gboard's superscript/fraction popup
+        }
+    }
+
+    /** The action-key registry: builds the key a token stands for. Keep TOKENS in sync. */
+    private void addTokenKey(KeyboardLayoutBuilder kb, String token) {
+        switch (token) {
+            case "esc": kb.addKey("Esc", CODE_ESCAPE); break;
+            case "tab": kb.addTabKey(); break;
+            case "sym": kb.addKey("SYM", CODE_SYMBOLS).onCtrlShow("CLIP"); break;
+            case "clip": kb.addKey("CLIP", CODE_CLIPBOARD_PAGE); break;
+            case "left": kb.addKey(context.getDrawable(R.drawable.ic_keyboard_arrow_left_24dp), 5000).asRepeatable(); break;
+            case "down": kb.addKey(context.getDrawable(R.drawable.ic_keyboard_arrow_down_24dp), 5001).asRepeatable(); break;
+            case "up": kb.addKey(context.getDrawable(R.drawable.ic_keyboard_arrow_up_24dp), 5002).asRepeatable(); break;
+            case "right": kb.addKey(context.getDrawable(R.drawable.ic_keyboard_arrow_right_24dp), 5003).asRepeatable(); break;
+            case "home": kb.addKey("Home", -18); break;
+            case "end": kb.addKey("End", -19); break;
+            case "ins": kb.addKey("Ins", -20); break;
+            case "del": kb.addKey("Del", -21).asRepeatable(); break;
+            case "pgup": kb.addKey("PgUp", -22).asRepeatable(); break;
+            case "pgdn": kb.addKey("PgDn", -23).asRepeatable(); break;
+            case "selectall": kb.addKey(context.getDrawable(R.drawable.ic_select_all_24dp), 53737); break;
+            case "cut": kb.addKey(context.getDrawable(R.drawable.ic_cut_24dp), 53738); break;
+            case "copy": kb.addKey(context.getDrawable(R.drawable.ic_copy_24dp), 53739); break;
+            case "paste": kb.addKey(context.getDrawable(R.drawable.ic_paste_24dp), 53740); break;
+            case "undo": kb.addKey(context.getDrawable(R.drawable.ic_undo_24dp), 53741); break;
+            case "redo": kb.addKey(context.getDrawable(R.drawable.ic_redo_24dp), 53742); break;
+            case "space": kb.addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32); break;
+            case "enter": kb.addKey(context.getDrawable(R.drawable.ic_keyboard_return_24dp), -4); break;
+            case "bksp":
+            case "backspace": kb.addBackspaceKey(); break;
+            case "settings": kb.addKey(context.getDrawable(R.drawable.ic_settings_24dp), CODE_SETTINGS); break;
+            case "emoji": kb.addKey(context.getDrawable(R.drawable.ic_emoji_24dp), CODE_EMOJI_PAGE); break;
+            case "scrollup": kb.addKey(context.getDrawable(R.drawable.ic_scroll_up_24dp), CODE_SCROLL_UP).asRepeatable(); break;
+            case "scrolldown": kb.addKey(context.getDrawable(R.drawable.ic_scroll_down_24dp), CODE_SCROLL_DOWN).asRepeatable(); break;
+            case "ghost": kb.addKey("👻", CODE_GHOST_MODE); break;
+            default:
+                // f1..f12 (F1 = -6 ... F12 = -17, the existing SYM-page codes)
+                if (token.length() >= 2 && token.charAt(0) == 'f') {
+                    int n = Integer.parseInt(token.substring(1));
+                    kb.addKey("F" + n, -5 - n);
+                }
+                break;
+        }
+    }
+
+    public void addCustomRow(KeyboardLayoutBuilder keyboard, String symbols, float splitGap) {
+        keyboard.newRow();
+        for (String unit : parseUnits(symbols)) {
+            addUnitKey(keyboard, unit);
         }
         // Split rows of up to 12 keys down the middle; longer rows stay full-width.
         if (splitGap > 0) keyboard.splitCurrentRow(splitGap, 12);
@@ -318,16 +430,18 @@ public class Definitions {
     }
 
     public void addCustomSpaceRow(KeyboardLayoutBuilder keyboard, String symbols) {
-        char[] chars = symbols.toCharArray();
+        List<String> units = parseUnits(symbols); // same {token} support as the other custom rows
 
         keyboard.newRow().addKey("Ctrl", 17).asModifier().onCtrlShow("CTRL");
 
-        for (int i = 0; i < (chars.length + 1) / 2 && chars.length > 0; i++) {
-            keyboard.addKey(chars[i]).withSize(.7f);
+        for (int i = 0; i < (units.size() + 1) / 2; i++) {
+            addUnitKey(keyboard, units.get(i));
+            keyboard.withSize(.7f);
         }
         keyboard.addKey(context.getDrawable(R.drawable.ic_space_bar_24dp), 32).withSize(2f);
-        for (int i = (chars.length + 1) / 2; i < chars.length; i++) {
-            keyboard.addKey(chars[i]).withSize(.7f);
+        for (int i = (units.size() + 1) / 2; i < units.size(); i++) {
+            addUnitKey(keyboard, units.get(i));
+            keyboard.withSize(.7f);
         }
         keyboard.addEnterKey();
 
